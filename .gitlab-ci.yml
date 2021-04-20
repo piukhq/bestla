@@ -1,0 +1,33 @@
+stages:
+  - tests
+
+default:
+  image: binkhq/python:3.9
+
+tests:
+  stage: tests
+
+  before_script: &setup
+    - pip install pipenv
+    - pipenv install --dev --system --ignore-pipfile
+    - pip list
+  script:
+    - pytest --verbose --cov app --cov-report term-missing
+
+complexity:
+  stage: tests
+  before_script: *setup
+  script:
+    - xenon --max-average A --max-modules B --max-absolute B .
+
+style:
+  stage: tests
+  before_script: *setup
+  script:
+    - flake8 && black --line-length 120 --check .
+
+type-check:
+  stage: tests
+  before_script: *setup
+  script:
+    - mypy --config-file .mypy.ini app
