@@ -83,7 +83,7 @@ def account_holders_generator(
 
     db_uri = "postgresql+psycopg2://%s:%s@%s:%s/%s" % (db_user, db_pass, db_host, db_port, db_name)
     generate_account_holders(users_to_create, retailer, campaign, max_val, db_uri)
-    click.echo("account holders created.")
+    click.echo("\nAccount holders created.")
     exit(0)
 
 

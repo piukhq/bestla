@@ -1,11 +1,14 @@
 from random import randint
+from typing import TYPE_CHECKING
 
 import click
 from progressbar import progressbar
-from sqlalchemy.orm import Session
 
 from .db import AccountHolder, Retailer, load_models
 from .enums import UserTypes
+
+if TYPE_CHECKING:
+    from sqlalchemy.orm import Session
 
 
 def _generate_account_number(prefix: str, user_type: UserTypes, user_n: int) -> str:
@@ -34,7 +37,7 @@ def _generate_email(user_type: UserTypes, user_n: int) -> str:
     return f"test_{user_type.value}_user_{user_n}@autogen.bpl"
 
 
-def _clear_existing_account_holders(db_session: Session, retailer: Retailer) -> None:
+def _clear_existing_account_holders(db_session: "Session", retailer: Retailer) -> None:
     db_session.query(AccountHolder).filter(
         AccountHolder.retailer == retailer,
         AccountHolder.email.like(r"test_%_user_%@autogen.bpl"),
@@ -54,7 +57,7 @@ def _account_holder_payload(user_n: int, user_type: UserTypes, retailer: Retaile
 
 
 def _create_account_holder(
-    db_session: Session, retailer: Retailer, campaign: str, user_n: int, user_type: UserTypes, max_val: int
+    db_session: "Session", retailer: Retailer, campaign: str, user_n: int, user_type: UserTypes, max_val: int
 ) -> AccountHolder:
     account_holder = AccountHolder(**_account_holder_payload(user_n, user_type, retailer, campaign, max_val))
     db_session.add(account_holder)
@@ -63,7 +66,7 @@ def _create_account_holder(
     return account_holder
 
 
-def _get_retailer_by_slug(db_session: Session, retailer_slug: str) -> Retailer:
+def _get_retailer_by_slug(db_session: "Session", retailer_slug: str) -> Retailer:
     retailer = db_session.query(Retailer).filter_by(slug=retailer_slug).first()
     if not retailer:
         click.echo("requested retailer [%s] does not exists in DB.")
@@ -75,9 +78,10 @@ def _get_retailer_by_slug(db_session: Session, retailer_slug: str) -> Retailer:
 def generate_account_holders(ah_to_create: int, retailer_slug: str, campaign: str, max_val: int, db_uri: str) -> None:
     with load_models(db_uri) as db_session:
         retailer = _get_retailer_by_slug(db_session, retailer_slug)
+        click.echo("Selected retailer: %s" % retailer.name)
         _clear_existing_account_holders(db_session, retailer)
 
         for user_type in UserTypes:
-            click.echo("creating %s users." % user_type.value)
+            click.echo("\ncreating %s users." % user_type.value)
             for i in progressbar(range(ah_to_create)):
                 _create_account_holder(db_session, retailer, campaign, i, user_type, max_val)
