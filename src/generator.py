@@ -2,6 +2,7 @@ from random import randint
 from typing import TYPE_CHECKING
 
 import click
+
 from progressbar import progressbar
 
 from .db import AccountHolder, Retailer, load_models
@@ -16,7 +17,7 @@ def _generate_account_number(prefix: str, user_type: UserTypes, user_n: int) -> 
     return prefix + user_type.initials + "0" * (8 - len(user_n_str)) + user_n_str
 
 
-def _generate_balance(campaign: str, user_type: UserTypes, max_val: int):
+def _generate_balance(campaign: str, user_type: UserTypes, max_val: int) -> dict:
 
     if user_type == UserTypes.ZERO_BALANCE:
         value = 0
@@ -57,7 +58,12 @@ def _account_holder_payload(user_n: int, user_type: UserTypes, retailer: Retaile
 
 
 def _create_account_holder(
-    db_session: "Session", retailer: Retailer, campaign: str, user_n: int, user_type: UserTypes, max_val: int
+    db_session: "Session",
+    retailer: Retailer,
+    campaign: str,
+    user_n: int,
+    user_type: UserTypes,
+    max_val: int,
 ) -> AccountHolder:
     account_holder = AccountHolder(**_account_holder_payload(user_n, user_type, retailer, campaign, max_val))
     db_session.add(account_holder)

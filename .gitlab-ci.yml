@@ -19,5 +19,5 @@ style:
 type-check:
   stage: tests
   script:
-    - pip install mypy
+    - pip install mypy sqlalchemy-stubs
     - mypy --config-file .mypy.ini app

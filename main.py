@@ -81,7 +81,13 @@ def account_holders_generator(
         click.echo("the number of account holders to create must be between 1 and 1,000,000,000.")
         exit(-1)
 
-    db_uri = "postgresql+psycopg2://%s:%s@%s:%s/%s" % (db_user, db_pass, db_host, db_port, db_name)
+    db_uri = "postgresql+psycopg2://%s:%s@%s:%s/%s" % (
+        db_user,
+        db_pass,
+        db_host,
+        db_port,
+        db_name,
+    )
     generate_account_holders(users_to_create, retailer, campaign, max_val, db_uri)
     click.echo("\nAccount holders created.")
     exit(0)
