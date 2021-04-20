@@ -1,6 +1,6 @@
 import click
 
-from src.generator import generate_account_holders
+from .src.generator import generate_account_holders
 
 
 @click.command()
@@ -61,7 +61,7 @@ from src.generator import generate_account_holders
     default="polaris",
     help="database name.",
 )
-def account_holders_generator(
+def main(
     users_to_create: int,
     retailer: str,
     campaign: str,
@@ -94,4 +94,4 @@ def account_holders_generator(
 
 
 if __name__ == "__main__":
-    account_holders_generator()
+    main()
