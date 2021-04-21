@@ -9,6 +9,7 @@ setup(
         "progressbar2 == 3.53.1",
         "SQLAlchemy == 1.4.9",
         "psycopg2-binary == 2.8.6",
+        "Faker == 8.1.0",
     ],
     entry_points={
         "console_scripts": [

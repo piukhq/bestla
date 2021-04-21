@@ -1,12 +1,16 @@
 from random import randint
 from typing import TYPE_CHECKING
+from uuid import uuid4
 
 import click
 
+from faker import Faker
 from progressbar import ProgressBar
 
-from .db import AccountHolder, Retailer, load_models
+from .db import AccountHolder, AccountHolderProfile, Retailer, load_models
 from .enums import UserTypes
+
+fake = Faker(["en-GB"])
 
 if TYPE_CHECKING:
     from sqlalchemy.orm import Session
@@ -50,6 +54,7 @@ def _clear_existing_account_holders(db_session: "Session", retailer: Retailer) -
 
 def _account_holder_payload(user_n: int, user_type: UserTypes, retailer: Retailer, campaign: str, max_val: int) -> dict:
     return {
+        "id": uuid4(),
         "email": _generate_email(user_type, user_n),
         "retailer_id": retailer.id,
         "status": "ACTIVE",
@@ -60,6 +65,28 @@ def _account_holder_payload(user_n: int, user_type: UserTypes, retailer: Retaile
     }
 
 
+def _account_holder_profile_payload(account_holder: AccountHolder) -> dict:
+
+    address = fake.street_address().split("\n")
+    address_1 = address[0]
+    if len(address) > 1:
+        address_2 = address[1]
+    else:
+        address_2 = ""
+
+    return {
+        "account_holder_id": account_holder.id,
+        "birth_date": fake.date(),
+        "first_name": fake.first_name(),
+        "last_name": fake.last_name(),
+        "phone": fake.phone_number(),
+        "address_1": address_1,
+        "address_2": address_2,
+        "postcode": fake.postcode(),
+        "city": fake.city(),
+    }
+
+
 def _get_retailer_by_slug(db_session: "Session", retailer_slug: str) -> Retailer:
     retailer = db_session.query(Retailer).filter_by(slug=retailer_slug).first()
     if not retailer:
@@ -67,6 +94,34 @@ def _get_retailer_by_slug(db_session: "Session", retailer_slug: str) -> Retailer
         exit(-1)
 
     return retailer
+
+
+def _batch_create_account_holders(
+    *,
+    db_session: "Session",
+    batch_start: int,
+    batch_end: int,
+    user_type: UserTypes,
+    retailer: Retailer,
+    campaign: str,
+    max_val: int,
+    bar: ProgressBar,
+    progress_counter: int,
+) -> int:
+    account_holders_batch = []
+    account_holders_profile_batch = []
+    for i in range(batch_start, batch_end, -1):
+        account_holder = AccountHolder(**_account_holder_payload(i, user_type, retailer, campaign, max_val))
+        account_holders_batch.append(account_holder)
+        account_holders_profile_batch.append(AccountHolderProfile(**_account_holder_profile_payload(account_holder)))
+        progress_counter += 1
+        bar.update(progress_counter)
+
+    db_session.bulk_save_objects(account_holders_batch)
+    db_session.bulk_save_objects(account_holders_profile_batch)
+    db_session.commit()
+
+    return progress_counter
 
 
 def generate_account_holders(ah_to_create: int, retailer_slug: str, campaign: str, max_val: int, db_uri: str) -> None:
@@ -80,7 +135,7 @@ def generate_account_holders(ah_to_create: int, retailer_slug: str, campaign: st
         for user_type in UserTypes:
             click.echo("\ncreating %s users." % user_type.value)
             batch_start = ah_to_create
-            created_counter = 0
+            progress_counter = 0
 
             with ProgressBar(max_value=ah_to_create) as bar:
                 while batch_start > 0:
@@ -90,16 +145,15 @@ def generate_account_holders(ah_to_create: int, retailer_slug: str, campaign: st
                     else:
                         batch_end = batch_start - BATCH_SIZE
 
-                    account_holders_batch = []
-
-                    for i in range(batch_start, batch_end, -1):
-                        created_counter += 1
-                        account_holders_batch.append(
-                            AccountHolder(**_account_holder_payload(i, user_type, retailer, campaign, max_val))
-                        )
-
-                    db_session.bulk_save_objects(account_holders_batch)
-                    db_session.commit()
-
-                    bar.update(created_counter)
+                    progress_counter = _batch_create_account_holders(
+                        db_session=db_session,
+                        batch_start=batch_start,
+                        batch_end=batch_end,
+                        user_type=user_type,
+                        retailer=retailer,
+                        campaign=campaign,
+                        max_val=max_val,
+                        bar=bar,
+                        progress_counter=progress_counter,
+                    )
                     batch_start = batch_end
