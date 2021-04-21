@@ -47,7 +47,6 @@ def _generate_email(user_type: UserTypes, user_n: int) -> str:
 
 def _clear_existing_account_holders(db_session: "Session", retailer: Retailer) -> None:
     db_session.query(AccountHolder).filter(
-        AccountHolder.retailer == retailer,
         AccountHolder.email.like(r"test_%_user_%@autogen.bpl"),
     ).delete(synchronize_session=False)
 
@@ -108,6 +107,7 @@ def _batch_create_account_holders(
     bar: ProgressBar,
     progress_counter: int,
 ) -> int:
+
     account_holders_batch = []
     account_holders_profile_batch = []
     for i in range(batch_start, batch_end, -1):
