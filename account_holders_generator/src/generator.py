@@ -65,7 +65,7 @@ def _account_holder_payload(user_n: int, user_type: UserTypes, retailer: Retaile
 
 
 def _account_holder_profile_payload(account_holder: AccountHolder) -> dict:
-
+    phone_prefix = "0" if randint(0, 1) else "+44"
     address = fake.street_address().split("\n")
     address_1 = address[0]
     if len(address) > 1:
@@ -78,7 +78,7 @@ def _account_holder_profile_payload(account_holder: AccountHolder) -> dict:
         "birth_date": fake.date(),
         "first_name": fake.first_name(),
         "last_name": fake.last_name(),
-        "phone": fake.phone_number(),
+        "phone": phone_prefix + fake.msisdn(),
         "address_1": address_1,
         "address_2": address_2,
         "postcode": fake.postcode(),
