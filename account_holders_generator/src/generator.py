@@ -45,7 +45,7 @@ def _generate_email(user_type: UserTypes, user_n: int) -> str:
     return f"test_{user_type.value}_user_{user_n}@autogen.bpl"
 
 
-def _clear_existing_account_holders(db_session: "Session", retailer: Retailer) -> None:
+def _clear_existing_account_holders(db_session: "Session") -> None:
     db_session.query(AccountHolder).filter(
         AccountHolder.email.like(r"test_%_user_%@autogen.bpl"),
     ).delete(synchronize_session=False)
@@ -130,7 +130,7 @@ def generate_account_holders(ah_to_create: int, retailer_slug: str, campaign: st
         retailer = _get_retailer_by_slug(db_session, retailer_slug)
         click.echo("Selected retailer: %s" % retailer.name)
         click.echo("Deleting previously generate account holders.")
-        _clear_existing_account_holders(db_session, retailer)
+        _clear_existing_account_holders(db_session)
 
         for user_type in UserTypes:
             click.echo("\ncreating %s users." % user_type.value)
