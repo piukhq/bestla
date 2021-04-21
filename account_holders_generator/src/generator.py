@@ -139,7 +139,7 @@ def generate_account_holders(ah_to_create: int, retailer_slug: str, campaign: st
             with ProgressBar(max_value=ah_to_create) as bar:
                 while batch_start > 0:
 
-                    if batch_start < BATCH_SIZE:
+                    if batch_start <= BATCH_SIZE:
                         batch_end = 0
                     else:
                         batch_end = batch_start - BATCH_SIZE
