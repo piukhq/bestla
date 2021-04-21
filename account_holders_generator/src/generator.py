@@ -3,13 +3,16 @@ from typing import TYPE_CHECKING
 
 import click
 
-from progressbar import progressbar
+from progressbar import ProgressBar
 
 from .db import AccountHolder, Retailer, load_models
 from .enums import UserTypes
 
 if TYPE_CHECKING:
     from sqlalchemy.orm import Session
+
+
+BATCH_SIZE = 1000
 
 
 def _generate_account_number(prefix: str, user_type: UserTypes, user_n: int) -> str:
@@ -57,21 +60,6 @@ def _account_holder_payload(user_n: int, user_type: UserTypes, retailer: Retaile
     }
 
 
-def _create_account_holder(
-    db_session: "Session",
-    retailer: Retailer,
-    campaign: str,
-    user_n: int,
-    user_type: UserTypes,
-    max_val: int,
-) -> AccountHolder:
-    account_holder = AccountHolder(**_account_holder_payload(user_n, user_type, retailer, campaign, max_val))
-    db_session.add(account_holder)
-    db_session.commit()
-
-    return account_holder
-
-
 def _get_retailer_by_slug(db_session: "Session", retailer_slug: str) -> Retailer:
     retailer = db_session.query(Retailer).filter_by(slug=retailer_slug).first()
     if not retailer:
@@ -82,12 +70,36 @@ def _get_retailer_by_slug(db_session: "Session", retailer_slug: str) -> Retailer
 
 
 def generate_account_holders(ah_to_create: int, retailer_slug: str, campaign: str, max_val: int, db_uri: str) -> None:
+
     with load_models(db_uri) as db_session:  # type: ignore
         retailer = _get_retailer_by_slug(db_session, retailer_slug)
         click.echo("Selected retailer: %s" % retailer.name)
+        click.echo("Deleting previously generate account holders.")
         _clear_existing_account_holders(db_session, retailer)
 
         for user_type in UserTypes:
             click.echo("\ncreating %s users." % user_type.value)
-            for i in progressbar(range(ah_to_create)):
-                _create_account_holder(db_session, retailer, campaign, i, user_type, max_val)
+            batch_start = ah_to_create
+            created_counter = 0
+
+            with ProgressBar(max_value=ah_to_create) as bar:
+                while batch_start > 0:
+
+                    if batch_start < BATCH_SIZE:
+                        batch_end = 0
+                    else:
+                        batch_end = batch_start - BATCH_SIZE
+
+                    account_holders_batch = []
+
+                    for i in range(batch_start, batch_end, -1):
+                        created_counter += 1
+                        account_holders_batch.append(
+                            AccountHolder(**_account_holder_payload(i, user_type, retailer, campaign, max_val))
+                        )
+
+                    db_session.bulk_save_objects(account_holders_batch)
+                    db_session.commit()
+
+                    bar.update(created_counter)
+                    batch_start = batch_end

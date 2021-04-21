@@ -1,11 +1,17 @@
 import uuid
 
+from typing import TYPE_CHECKING
+
 from sqlalchemy import Column, create_engine
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.ext.automap import automap_base
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import NullPool
 from sqlalchemy.sql.schema import MetaData
+
+if TYPE_CHECKING:
+    from sqlalchemy.orm.session import Session
+
 
 metadata = MetaData()
 Base = automap_base(metadata=metadata)
@@ -25,7 +31,7 @@ class AccountHolderProfile(Base):  # type: ignore
     __tablename__ = "account_holder_profile"
 
 
-def load_models(db_uri: str) -> sessionmaker:
+def load_models(db_uri: str) -> "Session":
     engine = create_engine(db_uri, poolclass=NullPool)
     SessionMaker = sessionmaker(bind=engine)
     Base.prepare(engine, reflect=True)
