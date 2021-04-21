@@ -10,13 +10,12 @@ from progressbar import ProgressBar
 from .db import AccountHolder, AccountHolderProfile, Retailer, load_models
 from .enums import UserTypes
 
-fake = Faker(["en-GB"])
-
 if TYPE_CHECKING:
     from sqlalchemy.orm import Session
 
 
 BATCH_SIZE = 1000
+fake = Faker(["en-GB"])
 
 
 def _generate_account_number(prefix: str, user_type: UserTypes, user_n: int) -> str:
