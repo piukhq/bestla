@@ -74,12 +74,12 @@ def _account_holder_profile_payload(account_holder: AccountHolder) -> dict:
 
     return {
         "account_holder_id": account_holder.id,
-        "birth_date": fake.date(),
+        "date_of_birth": fake.date(),
         "first_name": fake.first_name(),
         "last_name": fake.last_name(),
         "phone": phone_prefix + fake.msisdn(),
-        "address_1": address_1,
-        "address_2": address_2,
+        "address_line1": address_1,
+        "address_line2": address_2,
         "postcode": fake.postcode(),
         "city": fake.city(),
     }
