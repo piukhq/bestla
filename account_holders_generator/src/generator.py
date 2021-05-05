@@ -129,7 +129,7 @@ def generate_account_holders(ah_to_create: int, retailer_slug: str, campaign: st
     with load_models(db_uri) as db_session:  # type: ignore
         retailer = _get_retailer_by_slug(db_session, retailer_slug)
         click.echo("Selected retailer: %s" % retailer.name)
-        click.echo("Deleting previously generate account holders.")
+        click.echo("Deleting previously generated account holders for requested retailer.")
         _clear_existing_account_holders(db_session, retailer.id)
 
         for user_type in UserTypes:
