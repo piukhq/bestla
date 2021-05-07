@@ -1,5 +1,5 @@
 from random import randint
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING, List, Union
 from uuid import uuid4
 
 import click
@@ -36,11 +36,13 @@ def _generate_balance(campaign: str, user_type: UserTypes, max_val: int) -> dict
             value += randint(1, 99)
 
     return {
-        campaign: {
-            "value": value,
-            "campaign_slug": campaign,
-        }
+        "value": value,
+        "campaign_slug": campaign,
     }
+
+
+def _generate_balances(active_campaigns: List[str], user_type: UserTypes, max_val: int) -> dict:
+    return {campaign: _generate_balance(campaign, user_type, max_val) for campaign in active_campaigns}
 
 
 def _generate_email(user_type: UserTypes, user_n: Union[int, str]) -> str:
@@ -55,7 +57,7 @@ def _clear_existing_account_holders(db_session: "Session", retailer_id: int) -> 
 
 
 def _account_holder_payload(
-    user_n: int, user_type: UserTypes, retailer: RetailerConfig, campaign: str, max_val: int
+    user_n: int, user_type: UserTypes, retailer: RetailerConfig, active_campaigns: List[str], max_val: int
 ) -> dict:
     return {
         "id": uuid4(),
@@ -65,7 +67,7 @@ def _account_holder_payload(
         "account_number": _generate_account_number(retailer.account_number_prefix, user_type, user_n),
         "is_superuser": False,
         "is_active": True,
-        "current_balances": _generate_balance(campaign, user_type, max_val),
+        "current_balances": _generate_balances(active_campaigns, user_type, max_val),
     }
 
 
@@ -107,7 +109,7 @@ def _batch_create_account_holders(
     batch_end: int,
     user_type: UserTypes,
     retailer: RetailerConfig,
-    campaign: str,
+    active_campaigns: List[str],
     max_val: int,
     bar: ProgressBar,
     progress_counter: int,
@@ -116,7 +118,7 @@ def _batch_create_account_holders(
     account_holders_batch = []
     account_holders_profile_batch = []
     for i in range(batch_start, batch_end, -1):
-        account_holder = AccountHolder(**_account_holder_payload(i, user_type, retailer, campaign, max_val))
+        account_holder = AccountHolder(**_account_holder_payload(i, user_type, retailer, active_campaigns, max_val))
         account_holders_batch.append(account_holder)
         account_holders_profile_batch.append(AccountHolderProfile(**_account_holder_profile_payload(account_holder)))
         progress_counter += 1
@@ -129,12 +131,20 @@ def _batch_create_account_holders(
     return progress_counter
 
 
-def get_active_campaign(db_session: "Session", retailer: RetailerConfig, campaign_default: str) -> str:
-    campaign = db_session.query(Campaign).join(RetailerRewards).filter(RetailerRewards.slug == retailer.slug).first()
-    if campaign is not None:
-        return campaign.slug
+def get_active_campaigns(db_session: "Session", retailer: RetailerConfig, campaign_default: str) -> List[str]:
+    campaigns = (
+        db_session.query(Campaign.slug)
+        .join(RetailerRewards)
+        .filter(
+            RetailerRewards.slug == retailer.slug,
+            Campaign.status == "ACTIVE",
+        )
+        .all()
+    )
+    if not campaigns:
+        return [campaign_default]
     else:
-        return campaign_default
+        return [campaign[0] for campaign in campaigns]
 
 
 def generate_account_holders(
@@ -147,7 +157,7 @@ def generate_account_holders(
     try:
         retailer = _get_retailer_by_slug(polaris_db_session, retailer_slug)
         click.echo("Selected retailer: %s" % retailer.name)
-        campaign = get_active_campaign(vela_db_session, retailer, campaign)
+        active_campaigns = get_active_campaigns(vela_db_session, retailer, campaign)
         click.echo("Selected campaign %s." % campaign)
         click.echo("Deleting previously generated account holders for requested retailer.")
         _clear_existing_account_holders(polaris_db_session, retailer.id)
@@ -171,7 +181,7 @@ def generate_account_holders(
                         batch_end=batch_end,
                         user_type=user_type,
                         retailer=retailer,
-                        campaign=campaign,
+                        active_campaigns=active_campaigns,
                         max_val=max_val,
                         bar=bar,
                         progress_counter=progress_counter,

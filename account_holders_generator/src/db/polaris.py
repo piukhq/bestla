@@ -35,5 +35,6 @@ class AccountHolderProfile(Base):  # type: ignore
 
 def load_models(db_uri: str) -> "Session":
     engine = create_engine(db_uri, poolclass=NullPool)
+
     Base.prepare(engine, reflect=True)
     return scoped_session(sessionmaker(bind=engine))
