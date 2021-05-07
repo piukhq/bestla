@@ -19,17 +19,16 @@ from .src.generator import generate_account_holders
     help="retailer used for generated account holders.",
 )
 @click.option(
-    "-c",
-    "--campaign",
-    default="test-campaign",
-    prompt="campaign:",
-    help="campaign name used for generated balances.",
-)
-@click.option(
     "--max-val",
     default=100,
     prompt="maximum balance value:",
     help="maximum balance value, decimals will be added at random.",
+)
+@click.option(
+    "-c",
+    "--campaign",
+    default="placeholder-campaign",
+    help="backup campaign name used for generating balances if no active campaign is found.",
 )
 @click.option(
     "--host",
@@ -56,21 +55,28 @@ from .src.generator import generate_account_holders
     help="database password.",
 )
 @click.option(
-    "--db-name",
-    "db_name",
+    "--polaris-db-name",
+    "polaris_db_name",
     default="polaris",
-    help="database name.",
+    help="polaris database name.",
+)
+@click.option(
+    "--vela-db-name",
+    "vela_db_name",
+    default="vela",
+    help="vela database name.",
 )
 def main(
     users_to_create: int,
     retailer: str,
-    campaign: str,
     max_val: int,
+    campaign: str,
     db_host: str,
     db_port: str,
     db_user: str,
     db_pass: str,
-    db_name: str,
+    polaris_db_name: str,
+    vela_db_name: str,
 ) -> None:
 
     if max_val < 0:
@@ -81,14 +87,15 @@ def main(
         click.echo("the number of account holders to create must be between 1 and 1,000,000,000.")
         exit(-1)
 
-    db_uri = "postgresql+psycopg2://%s:%s@%s:%s/%s" % (
+    db_uri = "postgresql+psycopg2://%s:%s@%s:%s/" % (
         db_user,
         db_pass,
         db_host,
         db_port,
-        db_name,
     )
-    generate_account_holders(users_to_create, retailer, campaign, max_val, db_uri)
+    polaris_db_uri = db_uri + polaris_db_name
+    vela_db_uri = db_uri + vela_db_name
+    generate_account_holders(users_to_create, retailer, campaign, max_val, polaris_db_uri, vela_db_uri)
     click.echo("\nAccount holders created.")
     exit(0)
 

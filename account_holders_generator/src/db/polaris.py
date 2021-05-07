@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 from sqlalchemy import Column, ForeignKey, create_engine
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.ext.automap import automap_base
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import scoped_session, sessionmaker
 from sqlalchemy.pool import NullPool
 from sqlalchemy.sql.schema import MetaData
 
@@ -23,8 +23,8 @@ class AccountHolder(Base):  # type: ignore
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
 
 
-class Retailer(Base):  # type: ignore
-    __tablename__ = "retailer"
+class RetailerConfig(Base):  # type: ignore
+    __tablename__ = "retailer_config"
 
 
 class AccountHolderProfile(Base):  # type: ignore
@@ -35,6 +35,5 @@ class AccountHolderProfile(Base):  # type: ignore
 
 def load_models(db_uri: str) -> "Session":
     engine = create_engine(db_uri, poolclass=NullPool)
-    SessionMaker = sessionmaker(bind=engine)
     Base.prepare(engine, reflect=True)
-    return SessionMaker()
+    return scoped_session(sessionmaker(bind=engine))

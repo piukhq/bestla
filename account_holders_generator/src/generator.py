@@ -7,7 +7,10 @@ import click
 from faker import Faker
 from progressbar import ProgressBar
 
-from .db import AccountHolder, AccountHolderProfile, Retailer, load_models
+from .db.polaris import AccountHolder, AccountHolderProfile, RetailerConfig
+from .db.polaris import load_models as load_polaris_models
+from .db.vela import Campaign, RetailerRewards
+from .db.vela import load_models as load_vela_models
 from .enums import UserTypes
 
 if TYPE_CHECKING:
@@ -50,7 +53,9 @@ def _clear_existing_account_holders(db_session: "Session") -> None:
     ).delete(synchronize_session=False)
 
 
-def _account_holder_payload(user_n: int, user_type: UserTypes, retailer: Retailer, campaign: str, max_val: int) -> dict:
+def _account_holder_payload(
+    user_n: int, user_type: UserTypes, retailer: RetailerConfig, campaign: str, max_val: int
+) -> dict:
     return {
         "id": uuid4(),
         "email": _generate_email(user_type, user_n),
@@ -85,8 +90,8 @@ def _account_holder_profile_payload(account_holder: AccountHolder) -> dict:
     }
 
 
-def _get_retailer_by_slug(db_session: "Session", retailer_slug: str) -> Retailer:
-    retailer = db_session.query(Retailer).filter_by(slug=retailer_slug).first()
+def _get_retailer_by_slug(db_session: "Session", retailer_slug: str) -> RetailerConfig:
+    retailer = db_session.query(RetailerConfig).filter_by(slug=retailer_slug).first()
     if not retailer:
         click.echo("requested retailer [%s] does not exists in DB.")
         exit(-1)
@@ -100,7 +105,7 @@ def _batch_create_account_holders(
     batch_start: int,
     batch_end: int,
     user_type: UserTypes,
-    retailer: Retailer,
+    retailer: RetailerConfig,
     campaign: str,
     max_val: int,
     bar: ProgressBar,
@@ -123,13 +128,28 @@ def _batch_create_account_holders(
     return progress_counter
 
 
-def generate_account_holders(ah_to_create: int, retailer_slug: str, campaign: str, max_val: int, db_uri: str) -> None:
+def get_active_campaign(db_session: "Session", retailer: RetailerConfig, campaign_default: str) -> str:
+    campaign = db_session.query(Campaign).join(RetailerRewards).filter(RetailerRewards.slug == retailer.slug).first()
+    if campaign is not None:
+        return campaign.slug
+    else:
+        return campaign_default
 
-    with load_models(db_uri) as db_session:  # type: ignore
-        retailer = _get_retailer_by_slug(db_session, retailer_slug)
+
+def generate_account_holders(
+    ah_to_create: int, retailer_slug: str, campaign: str, max_val: int, polaris_db_uri: str, vela_db_uri: str
+) -> None:
+
+    polaris_db_session = load_polaris_models(polaris_db_uri)
+    vela_db_session = load_vela_models(vela_db_uri)
+
+    try:
+        retailer = _get_retailer_by_slug(polaris_db_session, retailer_slug)
         click.echo("Selected retailer: %s" % retailer.name)
+        campaign = get_active_campaign(vela_db_session, retailer, campaign)
+        click.echo("Selected campaign %s." % campaign)
         click.echo("Deleting previously generate account holders.")
-        _clear_existing_account_holders(db_session)
+        _clear_existing_account_holders(polaris_db_session)
 
         for user_type in UserTypes:
             click.echo("\ncreating %s users." % user_type.value)
@@ -145,7 +165,7 @@ def generate_account_holders(ah_to_create: int, retailer_slug: str, campaign: st
                         batch_end = batch_start - BATCH_SIZE
 
                     progress_counter = _batch_create_account_holders(
-                        db_session=db_session,
+                        db_session=polaris_db_session,
                         batch_start=batch_start,
                         batch_end=batch_end,
                         user_type=user_type,
@@ -156,3 +176,6 @@ def generate_account_holders(ah_to_create: int, retailer_slug: str, campaign: st
                         progress_counter=progress_counter,
                     )
                     batch_start = batch_end
+    finally:
+        polaris_db_session.close()
+        vela_db_session.close()
