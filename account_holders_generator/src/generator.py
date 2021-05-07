@@ -1,5 +1,5 @@
 from random import randint
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Union
 from uuid import uuid4
 
 import click
@@ -43,13 +43,14 @@ def _generate_balance(campaign: str, user_type: UserTypes, max_val: int) -> dict
     }
 
 
-def _generate_email(user_type: UserTypes, user_n: int) -> str:
+def _generate_email(user_type: UserTypes, user_n: Union[int, str]) -> str:
+    user_n = str(user_n).rjust(2, "0")
     return f"test_{user_type.value}_user_{user_n}@autogen.bpl"
 
 
-def _clear_existing_account_holders(db_session: "Session") -> None:
+def _clear_existing_account_holders(db_session: "Session", retailer_id: int) -> None:
     db_session.query(AccountHolder).filter(
-        AccountHolder.email.like(r"test_%_user_%@autogen.bpl"),
+        AccountHolder.email.like(r"test_%_user_%@autogen.bpl"), AccountHolder.retailer_id == retailer_id
     ).delete(synchronize_session=False)
 
 
@@ -148,7 +149,7 @@ def generate_account_holders(
         click.echo("Selected retailer: %s" % retailer.name)
         campaign = get_active_campaign(vela_db_session, retailer, campaign)
         click.echo("Selected campaign %s." % campaign)
-        click.echo("Deleting previously generate account holders.")
+        click.echo("Deleting previously generated account holders for requested retailer.")
         _clear_existing_account_holders(polaris_db_session)
 
         for user_type in UserTypes:
