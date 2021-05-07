@@ -150,7 +150,7 @@ def generate_account_holders(
         campaign = get_active_campaign(vela_db_session, retailer, campaign)
         click.echo("Selected campaign %s." % campaign)
         click.echo("Deleting previously generated account holders for requested retailer.")
-        _clear_existing_account_holders(polaris_db_session)
+        _clear_existing_account_holders(polaris_db_session, retailer.id)
 
         for user_type in UserTypes:
             click.echo("\ncreating %s users." % user_type.value)
