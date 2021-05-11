@@ -1,5 +1,5 @@
 from random import randint
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING, List, Union
 from uuid import uuid4
 
 import click
@@ -7,7 +7,10 @@ import click
 from faker import Faker
 from progressbar import ProgressBar
 
-from .db import AccountHolder, AccountHolderProfile, Retailer, load_models
+from .db.polaris import AccountHolder, AccountHolderProfile, RetailerConfig
+from .db.polaris import load_models as load_polaris_models
+from .db.vela import Campaign, RetailerRewards
+from .db.vela import load_models as load_vela_models
 from .enums import UserTypes
 
 if TYPE_CHECKING:
@@ -33,11 +36,13 @@ def _generate_balance(campaign: str, user_type: UserTypes, max_val: int) -> dict
             value += randint(1, 99)
 
     return {
-        campaign: {
-            "value": value,
-            "campaign_slug": campaign,
-        }
+        "value": value,
+        "campaign_slug": campaign,
     }
+
+
+def _generate_balances(active_campaigns: List[str], user_type: UserTypes, max_val: int) -> dict:
+    return {campaign: _generate_balance(campaign, user_type, max_val) for campaign in active_campaigns}
 
 
 def _generate_email(user_type: UserTypes, user_n: Union[int, str]) -> str:
@@ -51,7 +56,9 @@ def _clear_existing_account_holders(db_session: "Session", retailer_id: int) -> 
     ).delete(synchronize_session=False)
 
 
-def _account_holder_payload(user_n: int, user_type: UserTypes, retailer: Retailer, campaign: str, max_val: int) -> dict:
+def _account_holder_payload(
+    user_n: int, user_type: UserTypes, retailer: RetailerConfig, active_campaigns: List[str], max_val: int
+) -> dict:
     return {
         "id": uuid4(),
         "email": _generate_email(user_type, user_n),
@@ -60,7 +67,7 @@ def _account_holder_payload(user_n: int, user_type: UserTypes, retailer: Retaile
         "account_number": _generate_account_number(retailer.account_number_prefix, user_type, user_n),
         "is_superuser": False,
         "is_active": True,
-        "current_balances": _generate_balance(campaign, user_type, max_val),
+        "current_balances": _generate_balances(active_campaigns, user_type, max_val),
     }
 
 
@@ -86,8 +93,8 @@ def _account_holder_profile_payload(account_holder: AccountHolder) -> dict:
     }
 
 
-def _get_retailer_by_slug(db_session: "Session", retailer_slug: str) -> Retailer:
-    retailer = db_session.query(Retailer).filter_by(slug=retailer_slug).first()
+def _get_retailer_by_slug(db_session: "Session", retailer_slug: str) -> RetailerConfig:
+    retailer = db_session.query(RetailerConfig).filter_by(slug=retailer_slug).first()
     if not retailer:
         click.echo("requested retailer [%s] does not exists in DB.")
         exit(-1)
@@ -101,8 +108,8 @@ def _batch_create_account_holders(
     batch_start: int,
     batch_end: int,
     user_type: UserTypes,
-    retailer: Retailer,
-    campaign: str,
+    retailer: RetailerConfig,
+    active_campaigns: List[str],
     max_val: int,
     bar: ProgressBar,
     progress_counter: int,
@@ -111,7 +118,7 @@ def _batch_create_account_holders(
     account_holders_batch = []
     account_holders_profile_batch = []
     for i in range(batch_start, batch_end, -1):
-        account_holder = AccountHolder(**_account_holder_payload(i, user_type, retailer, campaign, max_val))
+        account_holder = AccountHolder(**_account_holder_payload(i, user_type, retailer, active_campaigns, max_val))
         account_holders_batch.append(account_holder)
         account_holders_profile_batch.append(AccountHolderProfile(**_account_holder_profile_payload(account_holder)))
         progress_counter += 1
@@ -124,13 +131,36 @@ def _batch_create_account_holders(
     return progress_counter
 
 
-def generate_account_holders(ah_to_create: int, retailer_slug: str, campaign: str, max_val: int, db_uri: str) -> None:
+def get_active_campaigns(db_session: "Session", retailer: RetailerConfig, campaign_default: str) -> List[str]:
+    campaigns = (
+        db_session.query(Campaign.slug)
+        .join(RetailerRewards)
+        .filter(
+            RetailerRewards.slug == retailer.slug,
+            Campaign.status == "ACTIVE",
+        )
+        .all()
+    )
+    if not campaigns:
+        return [campaign_default]
+    else:
+        return [campaign[0] for campaign in campaigns]
 
-    with load_models(db_uri) as db_session:  # type: ignore
-        retailer = _get_retailer_by_slug(db_session, retailer_slug)
+
+def generate_account_holders(
+    ah_to_create: int, retailer_slug: str, campaign: str, max_val: int, polaris_db_uri: str, vela_db_uri: str
+) -> None:
+
+    polaris_db_session = load_polaris_models(polaris_db_uri)
+    vela_db_session = load_vela_models(vela_db_uri)
+
+    try:
+        retailer = _get_retailer_by_slug(polaris_db_session, retailer_slug)
         click.echo("Selected retailer: %s" % retailer.name)
+        active_campaigns = get_active_campaigns(vela_db_session, retailer, campaign)
+        click.echo("Selected campaign %s." % campaign)
         click.echo("Deleting previously generated account holders for requested retailer.")
-        _clear_existing_account_holders(db_session, retailer.id)
+        _clear_existing_account_holders(polaris_db_session, retailer.id)
 
         for user_type in UserTypes:
             click.echo("\ncreating %s users." % user_type.value)
@@ -146,14 +176,17 @@ def generate_account_holders(ah_to_create: int, retailer_slug: str, campaign: st
                         batch_end = batch_start - BATCH_SIZE
 
                     progress_counter = _batch_create_account_holders(
-                        db_session=db_session,
+                        db_session=polaris_db_session,
                         batch_start=batch_start,
                         batch_end=batch_end,
                         user_type=user_type,
                         retailer=retailer,
-                        campaign=campaign,
+                        active_campaigns=active_campaigns,
                         max_val=max_val,
                         bar=bar,
                         progress_counter=progress_counter,
                     )
                     batch_start = batch_end
+    finally:
+        polaris_db_session.close()
+        vela_db_session.close()
