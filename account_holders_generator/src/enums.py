@@ -1,4 +1,5 @@
 from enum import Enum
+from typing import List
 
 
 class UserTypes(str, Enum):
@@ -8,4 +9,7 @@ class UserTypes(str, Enum):
 
     @property
     def initials(self) -> str:
-        return "".join(map(lambda x: x[0], self.upper().split("_")))
+        user_types: List = list(UserTypes)
+        initials = f"0{user_types.index(self)}"
+
+        return initials
