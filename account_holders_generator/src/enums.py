@@ -7,5 +7,6 @@ class UserTypes(str, Enum):
     FLOAT_BALANCE = "float_balance"
 
     @property
-    def initials(self) -> str:
-        return "".join(map(lambda x: x[0], self.upper().split("_")))
+    def user_type_index(self) -> str:
+        user_types = list(UserTypes)
+        return f"0{user_types.index(self)}"

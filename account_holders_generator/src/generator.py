@@ -23,7 +23,7 @@ fake = Faker(["en-GB"])
 
 def _generate_account_number(prefix: str, user_type: UserTypes, user_n: int) -> str:
     user_n_str = str(user_n)
-    return prefix + user_type.initials + "0" * (8 - len(user_n_str)) + user_n_str
+    return prefix + user_type.user_type_index + "0" * (8 - len(user_n_str)) + user_n_str
 
 
 def _generate_balance(campaign: str, user_type: UserTypes, max_val: int) -> dict:
