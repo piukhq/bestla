@@ -10,3 +10,10 @@ class UserTypes(str, Enum):
     def user_type_index(self) -> str:
         user_types = list(UserTypes)
         return f"0{user_types.index(self)}"
+
+
+class UserVoucherStatuses(Enum):
+    ISSUED = "ISSUED"
+    CANCELLED = "CANCELLED"
+    EXPIRED = "EXPIRED"
+    REDEEMED = "REDEEMED"

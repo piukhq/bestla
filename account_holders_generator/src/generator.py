@@ -1,17 +1,19 @@
+from datetime import datetime, timedelta
 from random import randint
-from typing import TYPE_CHECKING, List, Union
+from typing import TYPE_CHECKING, List, Tuple, Union
 from uuid import uuid4
 
 import click
 
 from faker import Faker
+from hashids import Hashids
 from progressbar import ProgressBar
 
-from .db.polaris import AccountHolder, AccountHolderProfile, RetailerConfig
+from .db.polaris import AccountHolder, AccountHolderProfile, RetailerConfig, UserVoucher
 from .db.polaris import load_models as load_polaris_models
 from .db.vela import Campaign, RetailerRewards
 from .db.vela import load_models as load_vela_models
-from .enums import UserTypes
+from .enums import UserTypes, UserVoucherStatuses
 
 if TYPE_CHECKING:
     from sqlalchemy.orm import Session
@@ -39,6 +41,69 @@ def _generate_balance(campaign: str, user_type: UserTypes, max_val: int) -> dict
         "value": value,
         "campaign_slug": campaign,
     }
+
+
+def _create_user_vouchers(
+    user_n: Union[int, str], account_holder: AccountHolder, batch_voucher_salt: str
+) -> List[UserVoucher]:
+    hashids = Hashids(batch_voucher_salt, min_length=15)
+
+    def _make_vouchers(vouchers_required: List[Tuple[int, UserVoucherStatuses]]) -> list[UserVoucher]:
+        vouchers: list[UserVoucher] = []
+        for i, (how_many, voucher_status) in enumerate(vouchers_required):
+            issue_date = datetime.utcnow() - timedelta(days=14)
+            for j in range(how_many):
+                vouchers.append(
+                    UserVoucher(
+                        account_holder_id=str(account_holder.id),
+                        voucher_code=hashids.encode(i, j, user_n),
+                        voucher_type_slug="accumulator",
+                        status=voucher_status.value,
+                        issued_date=issue_date,
+                        expiry_date=datetime.utcnow() - timedelta(days=randint(2, 10))
+                        if voucher_status == UserVoucherStatuses.EXPIRED
+                        else datetime(2030, 1, 1),
+                        redeemed_date=datetime.utcnow() - timedelta(days=randint(2, 10))
+                        if voucher_status == UserVoucherStatuses.REDEEMED
+                        else None,
+                    )
+                )
+        return vouchers
+
+    user_voucher_type = int(user_n) % 10
+    switcher: dict[int, List] = {
+        1: [],
+        2: [],
+        3: [(1, UserVoucherStatuses.ISSUED)],
+        4: [
+            (1, UserVoucherStatuses.ISSUED),
+            (1, UserVoucherStatuses.EXPIRED),
+            (1, UserVoucherStatuses.REDEEMED),
+            (1, UserVoucherStatuses.CANCELLED),
+        ],
+        5: [
+            (1, UserVoucherStatuses.ISSUED),
+            (1, UserVoucherStatuses.EXPIRED),
+        ],
+        6: [
+            (1, UserVoucherStatuses.EXPIRED),
+            (1, UserVoucherStatuses.REDEEMED),
+        ],
+        7: [(1, UserVoucherStatuses.ISSUED)],
+        8: [
+            (1, UserVoucherStatuses.EXPIRED),
+            (2, UserVoucherStatuses.REDEEMED),
+        ],
+        9: [
+            (2, UserVoucherStatuses.ISSUED),
+            (2, UserVoucherStatuses.EXPIRED),
+        ],
+        0: [
+            (3, UserVoucherStatuses.ISSUED),
+            (3, UserVoucherStatuses.REDEEMED),
+        ],
+    }
+    return _make_vouchers(switcher[user_voucher_type])
 
 
 def _generate_balances(active_campaigns: List[str], user_type: UserTypes, max_val: int) -> dict:
@@ -113,19 +178,23 @@ def _batch_create_account_holders(
     max_val: int,
     bar: ProgressBar,
     progress_counter: int,
+    user_type_voucher_code_salt: str,
 ) -> int:
 
     account_holders_batch = []
     account_holders_profile_batch = []
+    user_voucher_batch = []
     for i in range(batch_start, batch_end, -1):
         account_holder = AccountHolder(**_account_holder_payload(i, user_type, retailer, active_campaigns, max_val))
         account_holders_batch.append(account_holder)
         account_holders_profile_batch.append(AccountHolderProfile(**_account_holder_profile_payload(account_holder)))
+        user_voucher_batch.extend(_create_user_vouchers(i, account_holder, user_type_voucher_code_salt))
         progress_counter += 1
         bar.update(progress_counter)
 
     db_session.bulk_save_objects(account_holders_batch)
     db_session.bulk_save_objects(account_holders_profile_batch)
+    db_session.bulk_save_objects(user_voucher_batch)
     db_session.commit()
 
     return progress_counter
@@ -185,6 +254,7 @@ def generate_account_holders(
                         max_val=max_val,
                         bar=bar,
                         progress_counter=progress_counter,
+                        user_type_voucher_code_salt=str(uuid4()),  # to stop hashid clashes
                     )
                     batch_start = batch_end
     finally:
