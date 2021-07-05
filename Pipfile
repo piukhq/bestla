@@ -12,7 +12,7 @@ faker = "*"
 hashids = "*"
 
 [dev-packages]
-black = "==20.8b1"
+black = "*"
 isort = "*"
 flake8 = "*"
 mypy = "*"
@@ -21,3 +21,6 @@ sqlalchemy-stubs = "*"
 
 [requires]
 python_version = "3.9"
+
+[pipenv]
+allow_prereleases = true
