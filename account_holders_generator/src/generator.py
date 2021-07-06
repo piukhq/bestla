@@ -66,6 +66,9 @@ def _create_user_vouchers(
                         redeemed_date=datetime.utcnow() - timedelta(days=randint(2, 10))
                         if voucher_status == UserVoucherStatuses.REDEEMED
                         else None,
+                        cancelled_date=datetime.utcnow() - timedelta(days=randint(2, 10))
+                        if voucher_status == UserVoucherStatuses.CANCELLED
+                        else None,
                     )
                 )
         return vouchers
