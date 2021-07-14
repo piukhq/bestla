@@ -9,6 +9,8 @@ from faker import Faker
 from hashids import Hashids
 from progressbar import ProgressBar
 
+from .db.carina import Voucher, VoucherConfig
+from .db.carina import load_models as load_carina_models
 from .db.polaris import AccountHolder, AccountHolderProfile, RetailerConfig, UserVoucher
 from .db.polaris import load_models as load_polaris_models
 from .db.vela import Campaign, RetailerRewards
@@ -44,20 +46,37 @@ def _generate_balance(campaign: str, user_type: UserTypes, max_val: int) -> dict
 
 
 def _create_user_vouchers(
-    user_n: Union[int, str], account_holder: AccountHolder, batch_voucher_salt: str
-) -> List[UserVoucher]:
+    user_n: Union[int, str], account_holder: AccountHolder, batch_voucher_salt: str, voucher_config: VoucherConfig
+) -> tuple[list[Voucher], list[UserVoucher]]:
     hashids = Hashids(batch_voucher_salt, min_length=15)
 
-    def _make_vouchers(vouchers_required: List[Tuple[int, UserVoucherStatuses]]) -> list[UserVoucher]:
-        vouchers: list[UserVoucher] = []
+    def _make_vouchers(vouchers_required: List[Tuple[int, UserVoucherStatuses]]) -> tuple[
+        list[Voucher], list[UserVoucher]]:
+        user_vouchers: list[UserVoucher] = []
+        vouchers: list[Voucher] = []
         for i, (how_many, voucher_status) in enumerate(vouchers_required):
             issue_date = datetime.utcnow() - timedelta(days=14)
             for j in range(how_many):
+                voucher_code = hashids.encode(i, j, user_n),  # this
+                # voucher_type_slug = "accumulator",  # this
+                voucher_type_slug = voucher_config.voucher_type_slug
+                # id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
+                # voucher_code = Column(String, nullable=False, unique=True, index=True)
+                # allocated = Column(Boolean, default=False, nullable=False)
+                # voucher_config_id = Column(Integer, ForeignKey("voucher_config.id", ondelete="CASCADE"), nullable=False)
+                # voucher_config = relationship("VoucherConfig", back_populates="vouchers")
                 vouchers.append(
+                    Voucher(
+                        voucher_code=voucher_code,
+                        voucher_config_id=voucher_config.id,
+                        allocated=True,
+                    )
+                )
+                user_vouchers.append(
                     UserVoucher(
                         account_holder_id=str(account_holder.id),
-                        voucher_code=hashids.encode(i, j, user_n),
-                        voucher_type_slug="accumulator",
+                        voucher_code=voucher_code,
+                        voucher_type_slug=voucher_type_slug,
                         status=voucher_status.value,
                         issued_date=issue_date,
                         expiry_date=datetime.utcnow() - timedelta(days=randint(2, 10))
@@ -71,7 +90,7 @@ def _create_user_vouchers(
                         else None,
                     )
                 )
-        return vouchers
+        return vouchers, user_vouchers
 
     user_voucher_type = int(user_n) % 10
     switcher: dict[int, List] = {
@@ -170,9 +189,19 @@ def _get_retailer_by_slug(db_session: "Session", retailer_slug: str) -> Retailer
     return retailer
 
 
+def _get_voucher_config_by_retailer(db_session: "Session", retailer_slug: str) -> VoucherConfig:
+    voucher_config = db_session.query(VoucherConfig).filter_by(retailer_slug=retailer_slug).first()
+    if not voucher_config:
+        click.echo(f"No voucher config found for retailer: {retailer_slug}")
+        exit(-1)
+
+    return voucher_config
+
+
 def _batch_create_account_holders(
     *,
-    db_session: "Session",
+    polaris_db_session: "Session",
+    carina_db_session: "Session",
     batch_start: int,
     batch_end: int,
     user_type: UserTypes,
@@ -182,23 +211,29 @@ def _batch_create_account_holders(
     bar: ProgressBar,
     progress_counter: int,
     user_type_voucher_code_salt: str,
+    voucher_config: VoucherConfig,
 ) -> int:
 
     account_holders_batch = []
     account_holders_profile_batch = []
     user_voucher_batch = []
+    voucher_batch = []
     for i in range(batch_start, batch_end, -1):
         account_holder = AccountHolder(**_account_holder_payload(i, user_type, retailer, active_campaigns, max_val))
         account_holders_batch.append(account_holder)
         account_holders_profile_batch.append(AccountHolderProfile(**_account_holder_profile_payload(account_holder)))
-        user_voucher_batch.extend(_create_user_vouchers(i, account_holder, user_type_voucher_code_salt))
+        vouchers, user_vouchers = _create_user_vouchers(i, account_holder, user_type_voucher_code_salt, voucher_config)
+        voucher_batch.extend(vouchers)
+        user_voucher_batch.extend(user_vouchers)
         progress_counter += 1
         bar.update(progress_counter)
 
-    db_session.bulk_save_objects(account_holders_batch)
-    db_session.bulk_save_objects(account_holders_profile_batch)
-    db_session.bulk_save_objects(user_voucher_batch)
-    db_session.commit()
+    polaris_db_session.bulk_save_objects(account_holders_batch)
+    polaris_db_session.bulk_save_objects(account_holders_profile_batch)
+    carina_db_session.bulk_save_objects(voucher_batch)
+    carina_db_session.commit()
+    polaris_db_session.bulk_save_objects(user_voucher_batch)
+    polaris_db_session.commit()
 
     return progress_counter
 
@@ -220,15 +255,24 @@ def get_active_campaigns(db_session: "Session", retailer: RetailerConfig, campai
 
 
 def generate_account_holders(
-    ah_to_create: int, retailer_slug: str, campaign: str, max_val: int, polaris_db_uri: str, vela_db_uri: str
+    ah_to_create: int,
+    retailer_slug: str,
+    campaign: str,
+    max_val: int,
+    polaris_db_uri: str,
+    vela_db_uri: str,
+    carina_db_uri: str,
 ) -> None:
 
+    carina_db_session = load_carina_models(carina_db_uri)
     polaris_db_session = load_polaris_models(polaris_db_uri)
     vela_db_session = load_vela_models(vela_db_uri)
 
     try:
         retailer = _get_retailer_by_slug(polaris_db_session, retailer_slug)
         click.echo("Selected retailer: %s" % retailer.name)
+        voucher_config = _get_voucher_config_by_retailer(carina_db_session, retailer_slug)
+        click.echo(f"Voucher type slug for {retailer.name}: {voucher_config.voucher_type_slug}")
         active_campaigns = get_active_campaigns(vela_db_session, retailer, campaign)
         click.echo("Selected campaign %s." % campaign)
         click.echo("Deleting previously generated account holders for requested retailer.")
@@ -248,7 +292,8 @@ def generate_account_holders(
                         batch_end = batch_start - BATCH_SIZE
 
                     progress_counter = _batch_create_account_holders(
-                        db_session=polaris_db_session,
+                        polaris_db_session=polaris_db_session,
+                        carina_db_session=carina_db_session,
                         batch_start=batch_start,
                         batch_end=batch_end,
                         user_type=user_type,
@@ -258,8 +303,10 @@ def generate_account_holders(
                         bar=bar,
                         progress_counter=progress_counter,
                         user_type_voucher_code_salt=str(uuid4()),  # to stop hashid clashes
+                        voucher_config=voucher_config,
                     )
                     batch_start = batch_end
     finally:
+        carina_db_session.close()
         polaris_db_session.close()
         vela_db_session.close()

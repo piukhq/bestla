@@ -66,6 +66,12 @@ from .src.generator import generate_account_holders
     default="vela",
     help="vela database name.",
 )
+@click.option(
+    "--carina-db-name",
+    "carina_db_name",
+    default="carina",
+    help="carina database name.",
+)
 def main(
     users_to_create: int,
     retailer: str,
@@ -77,6 +83,7 @@ def main(
     db_pass: str,
     polaris_db_name: str,
     vela_db_name: str,
+    carina_db_name: str,
 ) -> None:
 
     if max_val < 0:
@@ -95,7 +102,8 @@ def main(
     )
     polaris_db_uri = db_uri + polaris_db_name
     vela_db_uri = db_uri + vela_db_name
-    generate_account_holders(users_to_create, retailer, campaign, max_val, polaris_db_uri, vela_db_uri)
+    carina_db_uri = db_uri + carina_db_name
+    generate_account_holders(users_to_create, retailer, campaign, max_val, polaris_db_uri, vela_db_uri, carina_db_uri)
     click.echo("\nAccount holders created.")
     exit(0)
 

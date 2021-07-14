@@ -9,6 +9,8 @@ from sqlalchemy.orm import scoped_session, sessionmaker
 from sqlalchemy.pool import NullPool
 from sqlalchemy.sql.schema import MetaData
 
+from config import settings
+
 if TYPE_CHECKING:
     from sqlalchemy.orm.session import Session
 
@@ -41,7 +43,7 @@ class UserVoucher(Base):  # type: ignore
 
 
 def load_models(db_uri: str) -> "Session":
-    engine = create_engine(db_uri, poolclass=NullPool)
+    engine = create_engine(db_uri, poolclass=NullPool, echo=settings.SQL_DEBUG)
 
     Base.prepare(engine, reflect=True)
     return scoped_session(sessionmaker(bind=engine))

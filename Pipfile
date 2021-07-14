@@ -10,6 +10,8 @@ click = "*"
 progressbar2 = "*"
 faker = "*"
 hashids = "*"
+pydantic = "*"
+python-dotenv = "*"
 
 [dev-packages]
 black = "*"
