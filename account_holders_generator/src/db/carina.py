@@ -17,14 +17,14 @@ metadata = MetaData()
 Base = automap_base(metadata=metadata)
 
 
-class Voucher(Base):
+class Voucher(Base):  # type: ignore
     __tablename__ = "voucher"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
     voucher_config_id = Column(Integer, ForeignKey("voucher_config.id", ondelete="CASCADE"), nullable=False)
 
 
-class VoucherConfig(Base):
+class VoucherConfig(Base):  # type: ignore
     __tablename__ = "voucher_config"
 
 

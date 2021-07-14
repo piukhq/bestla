@@ -50,21 +50,16 @@ def _create_user_vouchers(
 ) -> tuple[list[Voucher], list[UserVoucher]]:
     hashids = Hashids(batch_voucher_salt, min_length=15)
 
-    def _make_vouchers(vouchers_required: List[Tuple[int, UserVoucherStatuses]]) -> tuple[
-        list[Voucher], list[UserVoucher]]:
+    def _make_vouchers(
+        vouchers_required: List[Tuple[int, UserVoucherStatuses]]
+    ) -> tuple[list[Voucher], list[UserVoucher]]:
         user_vouchers: list[UserVoucher] = []
         vouchers: list[Voucher] = []
         for i, (how_many, voucher_status) in enumerate(vouchers_required):
             issue_date = datetime.utcnow() - timedelta(days=14)
             for j in range(how_many):
-                voucher_code = hashids.encode(i, j, user_n),  # this
-                # voucher_type_slug = "accumulator",  # this
+                voucher_code = (hashids.encode(i, j, user_n),)
                 voucher_type_slug = voucher_config.voucher_type_slug
-                # id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
-                # voucher_code = Column(String, nullable=False, unique=True, index=True)
-                # allocated = Column(Boolean, default=False, nullable=False)
-                # voucher_config_id = Column(Integer, ForeignKey("voucher_config.id", ondelete="CASCADE"), nullable=False)
-                # voucher_config = relationship("VoucherConfig", back_populates="vouchers")
                 vouchers.append(
                     Voucher(
                         voucher_code=voucher_code,
