@@ -45,6 +45,24 @@ def _generate_balance(campaign: str, user_type: UserTypes, max_val: int) -> dict
     }
 
 
+def _create_unallocated_vouchers(
+    unallocated_vouchers_to_create: int, batch_voucher_salt: str, voucher_config: VoucherConfig
+) -> list[Voucher]:
+    hashids = Hashids(batch_voucher_salt, min_length=15)
+    unallocated_vouchers = []
+    for i in range(unallocated_vouchers_to_create):
+        voucher_code = (hashids.encode(i),)
+        unallocated_vouchers.append(
+            Voucher(
+                voucher_code=voucher_code,
+                voucher_config_id=voucher_config.id,
+                allocated=False,
+            )
+        )
+
+    return unallocated_vouchers
+
+
 def _create_user_vouchers(
     user_n: Union[int, str], account_holder: AccountHolder, batch_voucher_salt: str, voucher_config: VoucherConfig
 ) -> tuple[list[Voucher], list[UserVoucher]]:
@@ -257,6 +275,7 @@ def generate_account_holders(
     polaris_db_uri: str,
     vela_db_uri: str,
     carina_db_uri: str,
+    unallocated_vouchers_to_create: int,
 ) -> None:
 
     carina_db_session = load_carina_models(carina_db_uri)
@@ -272,6 +291,13 @@ def generate_account_holders(
         click.echo("Selected campaign %s." % campaign)
         click.echo("Deleting previously generated account holders for requested retailer.")
         _clear_existing_account_holders(polaris_db_session, retailer.id)
+        unallocated_voucher_batch = _create_unallocated_vouchers(
+            unallocated_vouchers_to_create=unallocated_vouchers_to_create,
+            batch_voucher_salt=str(uuid4()),
+            voucher_config=voucher_config,
+        )
+        carina_db_session.bulk_save_objects(unallocated_voucher_batch)
+        carina_db_session.commit()
 
         for user_type in UserTypes:
             click.echo("\ncreating %s users." % user_type.value)
