@@ -6,7 +6,7 @@ from .src.generator import generate_account_holders
 @click.command()
 @click.option(
     "-n",
-    "users_to_create",
+    "account_holders_to_create",
     default=10,
     prompt="account holders of each type to create:",
     help="number of account holders of each type to create.",
@@ -80,7 +80,7 @@ from .src.generator import generate_account_holders
     help="total number of unallocated vouchers to create.",
 )
 def main(
-    users_to_create: int,
+    account_holders_to_create: int,
     retailer: str,
     max_val: int,
     campaign: str,
@@ -98,7 +98,7 @@ def main(
         click.echo("maximum balance value must be an integer greater than 1.")
         exit(-1)
 
-    if not (1000000000 > users_to_create > 0):
+    if not (1000000000 > account_holders_to_create > 0):
         click.echo("the number of account holders to create must be between 1 and 1,000,000,000.")
         exit(-1)
 
@@ -112,7 +112,7 @@ def main(
     vela_db_uri = db_uri + vela_db_name
     carina_db_uri = db_uri + carina_db_name
     generate_account_holders(
-        users_to_create,
+        account_holders_to_create,
         retailer,
         campaign,
         max_val,

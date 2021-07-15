@@ -35,8 +35,8 @@ class AccountHolderProfile(Base):  # type: ignore
     account_holder_id = Column(UUID(as_uuid=True), ForeignKey("account_holder.id", ondelete="CASCADE"))
 
 
-class UserVoucher(Base):  # type: ignore
-    __tablename__ = "user_voucher"
+class AccountHolderVoucher(Base):  # type: ignore
+    __tablename__ = "account_holder_voucher"
 
     voucher_id = Column(UUID(as_uuid=True), default=uuid.uuid4)
     account_holder_id = Column(UUID(as_uuid=True), ForeignKey("account_holder.id", ondelete="CASCADE"))
