@@ -51,7 +51,7 @@ def _generate_balance(campaign: str, account_holder_type: AccountHolderTypes, ma
 
 
 def _create_unallocated_vouchers(
-    unallocated_vouchers_to_create: int, batch_voucher_salt: str, voucher_config: VoucherConfig
+    unallocated_vouchers_to_create: int, batch_voucher_salt: str, voucher_config: VoucherConfig, retailer_slug: str
 ) -> list[Voucher]:
     hashids = Hashids(batch_voucher_salt, min_length=15)
     unallocated_vouchers = []
@@ -62,6 +62,7 @@ def _create_unallocated_vouchers(
                 voucher_code=voucher_code,
                 voucher_config_id=voucher_config.id,
                 allocated=False,
+                retailer_slug=retailer_slug,
             )
         )
 
@@ -73,6 +74,7 @@ def _create_account_holder_vouchers(
     account_holder: AccountHolder,
     batch_voucher_salt: str,
     voucher_config: VoucherConfig,
+    retailer: RetailerConfig,
 ) -> tuple[list[Voucher], list[AccountHolderVoucher]]:
     hashids = Hashids(batch_voucher_salt, min_length=15)
 
@@ -91,6 +93,7 @@ def _create_account_holder_vouchers(
                         voucher_code=voucher_code,
                         voucher_config_id=voucher_config.id,
                         allocated=True,
+                        retailer_slug=retailer.slug,
                     )
                 )
                 account_holder_vouchers.append(
@@ -252,7 +255,7 @@ def _batch_create_account_holders(
         account_holders_batch.append(account_holder)
         account_holders_profile_batch.append(AccountHolderProfile(**_account_holder_profile_payload(account_holder)))
         vouchers, account_holder_vouchers = _create_account_holder_vouchers(
-            i, account_holder, account_holder_type_voucher_code_salt, voucher_config
+            i, account_holder, account_holder_type_voucher_code_salt, voucher_config, retailer
         )
         voucher_batch.extend(vouchers)
         account_holder_voucher_batch.extend(account_holder_vouchers)
@@ -313,6 +316,7 @@ def generate_account_holders(
             unallocated_vouchers_to_create=unallocated_vouchers_to_create,
             batch_voucher_salt=str(uuid4()),
             voucher_config=voucher_config,
+            retailer_slug=retailer_slug,
         )
         carina_db_session.bulk_save_objects(unallocated_voucher_batch)
         carina_db_session.commit()
