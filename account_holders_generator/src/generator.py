@@ -101,7 +101,9 @@ def _create_account_holder_vouchers(
                         account_holder_id=str(account_holder.id),
                         voucher_code=voucher_code,
                         voucher_type_slug=voucher_type_slug,
-                        status=voucher_status.value,
+                        status=AccountHolderVoucherStatuses.ISSUED.value
+                        if voucher_status == AccountHolderVoucherStatuses.EXPIRED
+                        else voucher_status.value,
                         issued_date=issue_date,
                         expiry_date=datetime.utcnow() - timedelta(days=randint(2, 10))
                         if voucher_status == AccountHolderVoucherStatuses.EXPIRED
