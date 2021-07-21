@@ -9,6 +9,8 @@ from sqlalchemy.orm import scoped_session, sessionmaker
 from sqlalchemy.pool import NullPool
 from sqlalchemy.sql.schema import MetaData
 
+from config import settings
+
 if TYPE_CHECKING:
     from sqlalchemy.orm.session import Session
 
@@ -33,15 +35,15 @@ class AccountHolderProfile(Base):  # type: ignore
     account_holder_id = Column(UUID(as_uuid=True), ForeignKey("account_holder.id", ondelete="CASCADE"))
 
 
-class UserVoucher(Base):  # type: ignore
-    __tablename__ = "user_voucher"
+class AccountHolderVoucher(Base):  # type: ignore
+    __tablename__ = "account_holder_voucher"
 
     voucher_id = Column(UUID(as_uuid=True), default=uuid.uuid4)
     account_holder_id = Column(UUID(as_uuid=True), ForeignKey("account_holder.id", ondelete="CASCADE"))
 
 
 def load_models(db_uri: str) -> "Session":
-    engine = create_engine(db_uri, poolclass=NullPool)
+    engine = create_engine(db_uri, poolclass=NullPool, echo=settings.SQL_DEBUG)
 
     Base.prepare(engine, reflect=True)
     return scoped_session(sessionmaker(bind=engine))

@@ -6,7 +6,7 @@ from .src.generator import generate_account_holders
 @click.command()
 @click.option(
     "-n",
-    "users_to_create",
+    "account_holders_to_create",
     default=10,
     prompt="account holders of each type to create:",
     help="number of account holders of each type to create.",
@@ -66,8 +66,21 @@ from .src.generator import generate_account_holders
     default="vela",
     help="vela database name.",
 )
+@click.option(
+    "--carina-db-name",
+    "carina_db_name",
+    default="carina",
+    help="carina database name.",
+)
+@click.option(
+    "--unallocated-vouchers",
+    "unallocated_vouchers_to_create",
+    default=10,
+    prompt="number of unallocated vouchers:",
+    help="total number of unallocated vouchers to create.",
+)
 def main(
-    users_to_create: int,
+    account_holders_to_create: int,
     retailer: str,
     max_val: int,
     campaign: str,
@@ -77,13 +90,15 @@ def main(
     db_pass: str,
     polaris_db_name: str,
     vela_db_name: str,
+    carina_db_name: str,
+    unallocated_vouchers_to_create: int,
 ) -> None:
 
     if max_val < 0:
         click.echo("maximum balance value must be an integer greater than 1.")
         exit(-1)
 
-    if not (1000000000 > users_to_create > 0):
+    if not (1000000000 > account_holders_to_create > 0):
         click.echo("the number of account holders to create must be between 1 and 1,000,000,000.")
         exit(-1)
 
@@ -95,7 +110,17 @@ def main(
     )
     polaris_db_uri = db_uri + polaris_db_name
     vela_db_uri = db_uri + vela_db_name
-    generate_account_holders(users_to_create, retailer, campaign, max_val, polaris_db_uri, vela_db_uri)
+    carina_db_uri = db_uri + carina_db_name
+    generate_account_holders(
+        account_holders_to_create,
+        retailer,
+        campaign,
+        max_val,
+        polaris_db_uri,
+        vela_db_uri,
+        carina_db_uri,
+        unallocated_vouchers_to_create,
+    )
     click.echo("\nAccount holders created.")
     exit(0)
 
