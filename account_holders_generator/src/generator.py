@@ -1,3 +1,5 @@
+import sys
+
 from datetime import datetime, timedelta
 from random import randint
 from typing import TYPE_CHECKING, List, Tuple, Union
@@ -11,7 +13,7 @@ from progressbar import ProgressBar
 
 from .db.carina import Voucher, VoucherConfig
 from .db.carina import load_models as load_carina_models
-from .db.polaris import AccountHolder, AccountHolderProfile, RetailerConfig, AccountHolderVoucher
+from .db.polaris import AccountHolder, AccountHolderProfile, AccountHolderVoucher, RetailerConfig
 from .db.polaris import load_models as load_polaris_models
 from .db.vela import Campaign, RetailerRewards
 from .db.vela import load_models as load_vela_models
@@ -216,7 +218,7 @@ def _get_retailer_by_slug(db_session: "Session", retailer_slug: str) -> Retailer
     retailer = db_session.query(RetailerConfig).filter_by(slug=retailer_slug).first()
     if not retailer:
         click.echo("requested retailer [%s] does not exists in DB.")
-        exit(-1)
+        sys.exit(-1)
 
     return retailer
 
@@ -225,7 +227,7 @@ def _get_voucher_config_by_retailer(db_session: "Session", retailer_slug: str) -
     voucher_config = db_session.query(VoucherConfig).filter_by(retailer_slug=retailer_slug).first()
     if not voucher_config:
         click.echo(f"No voucher config found for retailer: {retailer_slug}")
-        exit(-1)
+        sys.exit(-1)
 
     return voucher_config
 

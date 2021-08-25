@@ -1,3 +1,5 @@
+import sys
+
 import click
 
 from .src.generator import generate_account_holders
@@ -96,11 +98,11 @@ def main(
 
     if max_val < 0:
         click.echo("maximum balance value must be an integer greater than 1.")
-        exit(-1)
+        sys.exit(-1)
 
     if not (1000000000 > account_holders_to_create > 0):
         click.echo("the number of account holders to create must be between 1 and 1,000,000,000.")
-        exit(-1)
+        sys.exit(-1)
 
     db_uri = "postgresql+psycopg2://%s:%s@%s:%s/" % (
         db_user,
@@ -122,7 +124,7 @@ def main(
         unallocated_vouchers_to_create,
     )
     click.echo("\nAccount holders created.")
-    exit(0)
+    sys.exit(0)
 
 
 if __name__ == "__main__":
