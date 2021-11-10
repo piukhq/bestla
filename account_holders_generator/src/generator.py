@@ -13,7 +13,13 @@ from progressbar import ProgressBar
 
 from .db.carina import Voucher, VoucherConfig
 from .db.carina import load_models as load_carina_models
-from .db.polaris import AccountHolder, AccountHolderProfile, AccountHolderVoucher, RetailerConfig
+from .db.polaris import (
+    AccountHolder,
+    AccountHolderCampaignBalance,
+    AccountHolderProfile,
+    AccountHolderVoucher,
+    RetailerConfig,
+)
 from .db.polaris import load_models as load_polaris_models
 from .db.vela import Campaign, RetailerRewards
 from .db.vela import load_models as load_vela_models
@@ -37,7 +43,7 @@ def _generate_account_number(prefix: str, account_holder_type: AccountHolderType
     )
 
 
-def _generate_balance(campaign: str, account_holder_type: AccountHolderTypes, max_val: int) -> dict:
+def _generate_balance(account_holder_type: AccountHolderTypes, max_val: int) -> int:
 
     if account_holder_type == AccountHolderTypes.ZERO_BALANCE:
         value = 0
@@ -46,10 +52,7 @@ def _generate_balance(campaign: str, account_holder_type: AccountHolderTypes, ma
         if account_holder_type == AccountHolderTypes.FLOAT_BALANCE:
             value += randint(1, 99)
 
-    return {
-        "value": value,
-        "campaign_slug": campaign,
-    }
+    return value
 
 
 def _create_unallocated_vouchers(
@@ -65,6 +68,7 @@ def _create_unallocated_vouchers(
                 voucher_config_id=voucher_config.id,
                 allocated=False,
                 retailer_slug=retailer_slug,
+                deleted=False,
             )
         )
 
@@ -156,8 +160,17 @@ def _create_account_holder_vouchers(
     return _make_vouchers(switcher[account_holder_voucher_type])
 
 
-def _generate_balances(active_campaigns: List[str], account_holder_type: AccountHolderTypes, max_val: int) -> dict:
-    return {campaign: _generate_balance(campaign, account_holder_type, max_val) for campaign in active_campaigns}
+def _generate_account_holder_campaign_balances(
+    account_holder: AccountHolder, active_campaigns: List[str], account_holder_type: AccountHolderTypes, max_val: int
+) -> List[AccountHolderCampaignBalance]:
+    return [
+        AccountHolderCampaignBalance(
+            account_holder_id=account_holder.id,
+            campaign_slug=campaign,
+            balance=_generate_balance(account_holder_type, max_val),
+        )
+        for campaign in active_campaigns
+    ]
 
 
 def _generate_email(account_holder_type: AccountHolderTypes, account_holder_n: Union[int, str]) -> str:
@@ -172,11 +185,7 @@ def _clear_existing_account_holders(db_session: "Session", retailer_id: int) -> 
 
 
 def _account_holder_payload(
-    account_holder_n: int,
-    account_holder_type: AccountHolderTypes,
-    retailer: RetailerConfig,
-    active_campaigns: List[str],
-    max_val: int,
+    account_holder_n: int, account_holder_type: AccountHolderTypes, retailer: RetailerConfig
 ) -> dict:
     return {
         "id": uuid4(),
@@ -188,7 +197,6 @@ def _account_holder_payload(
         ),
         "is_superuser": False,
         "is_active": True,
-        "current_balances": _generate_balances(active_campaigns, account_holder_type, max_val),
     }
 
 
@@ -250,13 +258,15 @@ def _batch_create_account_holders(
 
     account_holders_batch = []
     account_holders_profile_batch = []
+    account_holder_balance_batch = []
     account_holder_voucher_batch = []
     voucher_batch = []
     for i in range(batch_start, batch_end, -1):
-        account_holder = AccountHolder(
-            **_account_holder_payload(i, account_holder_type, retailer, active_campaigns, max_val)
-        )
+        account_holder = AccountHolder(**_account_holder_payload(i, account_holder_type, retailer))
         account_holders_batch.append(account_holder)
+        account_holder_balance_batch.extend(
+            _generate_account_holder_campaign_balances(account_holder, active_campaigns, account_holder_type, max_val)
+        )
         account_holders_profile_batch.append(AccountHolderProfile(**_account_holder_profile_payload(account_holder)))
         vouchers, account_holder_vouchers = _create_account_holder_vouchers(
             i, account_holder, account_holder_type_voucher_code_salt, voucher_config, retailer
@@ -270,7 +280,9 @@ def _batch_create_account_holders(
     polaris_db_session.bulk_save_objects(account_holders_profile_batch)
     carina_db_session.bulk_save_objects(voucher_batch)
     carina_db_session.commit()
+
     polaris_db_session.bulk_save_objects(account_holder_voucher_batch)
+    polaris_db_session.bulk_save_objects(account_holder_balance_batch)
     polaris_db_session.commit()
 
     return progress_counter

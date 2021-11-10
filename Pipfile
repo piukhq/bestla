@@ -14,15 +14,12 @@ pydantic = "*"
 python-dotenv = "*"
 
 [dev-packages]
-black = "*"
+black = "==21.9b0"
 isort = "*"
 flake8 = "*"
 mypy = "*"
 xenon = "*"
-sqlalchemy-stubs = "*"
 
 [requires]
 python_version = "3.9"
 
-[pipenv]
-allow_prereleases = true
