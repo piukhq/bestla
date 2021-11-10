@@ -2,14 +2,14 @@ from setuptools import find_packages, setup
 
 setup(
     name="Account Holders Generator",
-    version="0.1.0",
+    version="0.2.0",
     packages=find_packages(),
     install_requires=[
-        "click == 7.1.2",
-        "progressbar2 == 3.53.1",
-        "SQLAlchemy == 1.4.9",
-        "psycopg2-binary == 2.8.6",
-        "Faker == 8.1.0",
+        "click == 8.0.3",
+        "progressbar2 == 3.55.0",
+        "SQLAlchemy == 1.4.26",
+        "psycopg2-binary == 2.9.1",
+        "Faker == 9.8.0",
     ],
     entry_points={
         "console_scripts": [

@@ -42,6 +42,12 @@ class AccountHolderVoucher(Base):  # type: ignore
     account_holder_id = Column(UUID(as_uuid=True), ForeignKey("account_holder.id", ondelete="CASCADE"))
 
 
+class AccountHolderCampaignBalance(Base):  # type: ignore
+    __tablename__ = "account_holder_campaign_balance"
+
+    account_holder_id = Column(UUID(as_uuid=True), ForeignKey("account_holder.id", ondelete="CASCADE"))
+
+
 def load_models(db_uri: str) -> "Session":
     engine = create_engine(db_uri, poolclass=NullPool, echo=settings.SQL_DEBUG)
 
