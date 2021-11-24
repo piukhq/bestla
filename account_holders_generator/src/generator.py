@@ -92,19 +92,24 @@ def _create_account_holder_vouchers(
         for i, (how_many, voucher_status) in enumerate(vouchers_required):
             issue_date = datetime.utcnow() - timedelta(days=14)
             for j in range(how_many):
+                voucher_id = uuid4()
                 voucher_code = (hashids.encode(i, j, account_holder_n),)
                 voucher_type_slug = voucher_config.voucher_type_slug
                 vouchers.append(
                     Voucher(
+                        id=voucher_id,
                         voucher_code=voucher_code,
                         voucher_config_id=voucher_config.id,
                         allocated=True,
                         retailer_slug=retailer.slug,
+                        deleted=False,
                     )
                 )
                 account_holder_vouchers.append(
                     AccountHolderVoucher(
                         account_holder_id=str(account_holder.id),
+                        retailer_slug=retailer.slug,
+                        voucher_id=voucher_id,
                         voucher_code=voucher_code,
                         voucher_type_slug=voucher_type_slug,
                         status=AccountHolderVoucherStatuses.ISSUED.value
@@ -120,6 +125,7 @@ def _create_account_holder_vouchers(
                         cancelled_date=datetime.utcnow() - timedelta(days=randint(2, 10))
                         if voucher_status == AccountHolderVoucherStatuses.CANCELLED
                         else None,
+                        idempotency_token=uuid4(),
                     )
                 )
         return vouchers, account_holder_vouchers
