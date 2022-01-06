@@ -22,7 +22,7 @@ Base = automap_base(metadata=metadata)
 class AccountHolder(Base):  # type: ignore
     __tablename__ = "account_holder"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
+    account_holder_uuid = Column(UUID(as_uuid=True), default=uuid.uuid4)
 
 
 class RetailerConfig(Base):  # type: ignore
