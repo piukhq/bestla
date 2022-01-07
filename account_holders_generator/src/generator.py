@@ -107,7 +107,7 @@ def _create_account_holder_vouchers(
                 )
                 account_holder_vouchers.append(
                     AccountHolderVoucher(
-                        account_holder_id=str(account_holder.id),
+                        account_holder_id=account_holder.id,
                         retailer_slug=retailer.slug,
                         voucher_id=voucher_id,
                         voucher_code=voucher_code,
@@ -194,7 +194,6 @@ def _account_holder_payload(
     account_holder_n: int, account_holder_type: AccountHolderTypes, retailer: RetailerConfig
 ) -> dict:
     return {
-        "id": uuid4(),
         "email": _generate_email(account_holder_type, account_holder_n),
         "retailer_id": retailer.id,
         "status": "ACTIVE",
@@ -267,9 +266,15 @@ def _batch_create_account_holders(
     account_holder_balance_batch = []
     account_holder_voucher_batch = []
     voucher_batch = []
-    for i in range(batch_start, batch_end, -1):
-        account_holder = AccountHolder(**_account_holder_payload(i, account_holder_type, retailer))
-        account_holders_batch.append(account_holder)
+    batch_range = range(batch_start, batch_end, -1)
+
+    account_holders_batch = [
+        AccountHolder(**_account_holder_payload(i, account_holder_type, retailer)) for i in batch_range
+    ]
+    polaris_db_session.bulk_save_objects(account_holders_batch)
+    polaris_db_session.flush()
+
+    for account_holder, i in zip(account_holders_batch, batch_range):
         account_holder_balance_batch.extend(
             _generate_account_holder_campaign_balances(account_holder, active_campaigns, account_holder_type, max_val)
         )
@@ -282,14 +287,13 @@ def _batch_create_account_holders(
         progress_counter += 1
         bar.update(progress_counter)
 
-    polaris_db_session.bulk_save_objects(account_holders_batch)
     polaris_db_session.bulk_save_objects(account_holders_profile_batch)
-    carina_db_session.bulk_save_objects(voucher_batch)
-    carina_db_session.commit()
-
     polaris_db_session.bulk_save_objects(account_holder_voucher_batch)
     polaris_db_session.bulk_save_objects(account_holder_balance_batch)
     polaris_db_session.commit()
+
+    carina_db_session.bulk_save_objects(voucher_batch)
+    carina_db_session.commit()
 
     return progress_counter
 
