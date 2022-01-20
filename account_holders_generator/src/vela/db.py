@@ -7,18 +7,19 @@ from sqlalchemy.pool import NullPool
 from sqlalchemy.sql.schema import MetaData
 
 if TYPE_CHECKING:
+    from sqlalchemy.ext.automap import AutomapBase
     from sqlalchemy.orm.session import Session
 
 
 metadata = MetaData()
-Base = automap_base(metadata=metadata)
+Base: "AutomapBase" = automap_base(metadata=metadata)
 
 
-class RetailerRewards(Base):  # type: ignore
+class RetailerRewards(Base):
     __tablename__ = "retailer_rewards"
 
 
-class Campaign(Base):  # type: ignore
+class Campaign(Base):
     __tablename__ = "campaign"
 
 

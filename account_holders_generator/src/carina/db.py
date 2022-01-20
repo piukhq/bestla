@@ -10,21 +10,21 @@ from sqlalchemy.pool import NullPool
 from sqlalchemy.sql.schema import MetaData
 
 if TYPE_CHECKING:
+    from sqlalchemy.ext.automap import AutomapBase
     from sqlalchemy.orm.session import Session
 
-
 metadata = MetaData()
-Base = automap_base(metadata=metadata)
+Base: "AutomapBase" = automap_base(metadata=metadata)
 
 
-class Voucher(Base):  # type: ignore
+class Voucher(Base):
     __tablename__ = "voucher"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
     voucher_config_id = Column(Integer, ForeignKey("voucher_config.id", ondelete="CASCADE"), nullable=False)
 
 
-class VoucherConfig(Base):  # type: ignore
+class VoucherConfig(Base):
     __tablename__ = "voucher_config"
 
 

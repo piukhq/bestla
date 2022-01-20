@@ -12,7 +12,7 @@ class AccountHolderTypes(str, Enum):
         return f"0{account_holder_types.index(self)}"
 
 
-class AccountHolderVoucherStatuses(Enum):
+class AccountHolderRewardStatuses(Enum):
     ISSUED = "ISSUED"
     CANCELLED = "CANCELLED"
     EXPIRED = "EXPIRED"

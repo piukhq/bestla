@@ -2,7 +2,7 @@ import sys
 
 import click
 
-from .src.generator import generate_account_holders
+from .src.generator import generate_account_holders_and_rewards
 
 
 @click.command()
@@ -75,11 +75,11 @@ from .src.generator import generate_account_holders
     help="carina database name.",
 )
 @click.option(
-    "--unallocated-vouchers",
-    "unallocated_vouchers_to_create",
+    "--unallocated-rewards",
+    "unallocated_rewards_to_create",
     default=10,
-    prompt="number of unallocated vouchers:",
-    help="total number of unallocated vouchers to create.",
+    prompt="number of unallocated rewards:",
+    help="total number of unallocated rewards to create.",
 )
 def main(
     account_holders_to_create: int,
@@ -93,7 +93,7 @@ def main(
     polaris_db_name: str,
     vela_db_name: str,
     carina_db_name: str,
-    unallocated_vouchers_to_create: int,
+    unallocated_rewards_to_create: int,
 ) -> None:
 
     if max_val < 0:
@@ -113,7 +113,7 @@ def main(
     polaris_db_uri = db_uri + polaris_db_name
     vela_db_uri = db_uri + vela_db_name
     carina_db_uri = db_uri + carina_db_name
-    generate_account_holders(
+    generate_account_holders_and_rewards(
         account_holders_to_create,
         retailer,
         campaign,
@@ -121,9 +121,9 @@ def main(
         polaris_db_uri,
         vela_db_uri,
         carina_db_uri,
-        unallocated_vouchers_to_create,
+        unallocated_rewards_to_create,
     )
-    click.echo("\nAccount holders created.")
+    click.echo("\naccount holders and rewards created.")
     sys.exit(0)
 
 
