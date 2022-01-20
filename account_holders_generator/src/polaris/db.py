@@ -2,7 +2,7 @@ import uuid
 
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Column, ForeignKey, create_engine
+from sqlalchemy import BIGINT, Column, ForeignKey, create_engine
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.ext.automap import automap_base
 from sqlalchemy.orm import scoped_session, sessionmaker
@@ -12,40 +12,46 @@ from sqlalchemy.sql.schema import MetaData
 from config import settings
 
 if TYPE_CHECKING:
+    from sqlalchemy.ext.automap import AutomapBase
     from sqlalchemy.orm.session import Session
 
-
 metadata = MetaData()
-Base = automap_base(metadata=metadata)
+Base: "AutomapBase" = automap_base(metadata=metadata)
 
 
-class AccountHolder(Base):  # type: ignore
+class AccountHolder(Base):
     __tablename__ = "account_holder"
 
     account_holder_uuid = Column(UUID(as_uuid=True), default=uuid.uuid4)
 
 
-class RetailerConfig(Base):  # type: ignore
+class RetailerConfig(Base):
     __tablename__ = "retailer_config"
 
 
-class AccountHolderProfile(Base):  # type: ignore
+class AccountHolderProfile(Base):
     __tablename__ = "account_holder_profile"
 
     account_holder_id = Column(UUID(as_uuid=True), ForeignKey("account_holder.id", ondelete="CASCADE"))
 
 
-class AccountHolderVoucher(Base):  # type: ignore
-    __tablename__ = "account_holder_voucher"
+class AccountHolderMarketingPreference(Base):
+    __tablename__ = "account_holder_marketing_preference"
 
-    voucher_id = Column(UUID(as_uuid=True), default=uuid.uuid4)
-    account_holder_id = Column(UUID(as_uuid=True), ForeignKey("account_holder.id", ondelete="CASCADE"))
+    account_holder_id = Column(BIGINT, ForeignKey("account_holder.id", ondelete="CASCADE"))
 
 
-class AccountHolderCampaignBalance(Base):  # type: ignore
+class AccountHolderReward(Base):
+    __tablename__ = "account_holder_reward"
+
+    reward_uuid = Column(UUID(as_uuid=True), default=uuid.uuid4)
+    account_holder_id = Column(BIGINT, ForeignKey("account_holder.id", ondelete="CASCADE"))
+
+
+class AccountHolderCampaignBalance(Base):
     __tablename__ = "account_holder_campaign_balance"
 
-    account_holder_id = Column(UUID(as_uuid=True), ForeignKey("account_holder.id", ondelete="CASCADE"))
+    account_holder_id = Column(BIGINT, ForeignKey("account_holder.id", ondelete="CASCADE"))
 
 
 def load_models(db_uri: str) -> "Session":
