@@ -32,7 +32,7 @@ class RetailerConfig(Base):
 class AccountHolderProfile(Base):
     __tablename__ = "account_holder_profile"
 
-    account_holder_id = Column(UUID(as_uuid=True), ForeignKey("account_holder.id", ondelete="CASCADE"))
+    account_holder_id = Column(BIGINT, ForeignKey("account_holder.id", ondelete="CASCADE"))
 
 
 class AccountHolderMarketingPreference(Base):

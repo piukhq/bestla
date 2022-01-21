@@ -7,6 +7,8 @@ from uuid import uuid4
 import click
 
 from hashids import Hashids
+from sqlalchemy import delete
+from sqlalchemy.future import select
 
 from account_holders_generator.src.enums import AccountHolderRewardStatuses, AccountHolderTypes
 
@@ -16,6 +18,7 @@ from ..fixtures import (
     account_holder_payload,
     account_holder_profile_payload,
     account_holder_reward_payload,
+    retailer_config_payload,
     reward_payload,
 )
 from .db import (
@@ -35,9 +38,9 @@ if TYPE_CHECKING:
 
 
 def get_retailer_by_slug(db_session: "Session", retailer_slug: str) -> RetailerConfig:
-    retailer = db_session.query(RetailerConfig).filter_by(slug=retailer_slug).first()
+    retailer = db_session.scalar(select(RetailerConfig).where(RetailerConfig.slug == retailer_slug))
     if not retailer:
-        click.echo("requested retailer [%s] does not exists in DB.")
+        click.echo("requested retailer '%s' does not exists in DB." % retailer_slug)
         sys.exit(-1)
 
     return retailer
@@ -148,6 +151,25 @@ def _generate_account_holder_rewards(
 
 
 def clear_existing_account_holders(db_session: "Session", retailer_id: int) -> None:
-    db_session.query(AccountHolder).filter(
-        AccountHolder.email.like(r"test_%_user_%@autogen.bpl"), AccountHolder.retailer_id == retailer_id
-    ).delete(synchronize_session=False)
+    db_session.execute(
+        delete(AccountHolder)
+        .where(
+            AccountHolder.retailer_id == retailer_id,
+            AccountHolder.email.like(r"test_%_user_%@autogen.bpl"),
+        )
+        .execution_options(synchronize_session=False)
+    )
+    db_session.commit()
+
+
+def setup_retailer_config(db_session: "Session", retailer_slug: str) -> None:
+    db_session.execute(
+        delete(AccountHolder)
+        .where(AccountHolder.retailer_id == RetailerConfig.id, RetailerConfig.slug == retailer_slug)
+        .execution_options(synchronize_session=False)
+    )
+    db_session.execute(
+        delete(RetailerConfig).where(RetailerConfig.slug == retailer_slug).execution_options(synchronize_session=False)
+    )
+    db_session.add(RetailerConfig(**retailer_config_payload(retailer_slug)))
+    db_session.commit()
