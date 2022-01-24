@@ -2,7 +2,10 @@ import sys
 
 import click
 
-from .src.generator import generate_account_holders_and_rewards
+from .src.carina.db import load_models as load_carina_models
+from .src.generator import generate_account_holders_and_rewards, generate_retailer_base_config
+from .src.polaris.db import load_models as load_polaris_models
+from .src.vela.db import load_models as load_vela_models
 
 
 @click.command()
@@ -29,8 +32,13 @@ from .src.generator import generate_account_holders_and_rewards
 @click.option(
     "-c",
     "--campaign",
-    default="placeholder-campaign",
+    default="test-campaign-1",
     help="backup campaign name used for generating balances if no active campaign is found.",
+)
+@click.option(
+    "--reward-slug",
+    default="10percentoff",
+    help="reward_slug to use in case of a --bootstrap-new-retailer.",
 )
 @click.option(
     "--host",
@@ -81,11 +89,18 @@ from .src.generator import generate_account_holders_and_rewards
     prompt="number of unallocated rewards:",
     help="total number of unallocated rewards to create.",
 )
+@click.option(
+    "--bootstrap-new-retailer/--no-bootstrap-new-retailer",
+    "setup_retailer",
+    default=False,
+    help=("Sets up retailer, campaign, and reward config in addition to the usual account holders and rewards."),
+)
 def main(
     account_holders_to_create: int,
     retailer: str,
     max_val: int,
     campaign: str,
+    reward_slug: str,
     db_host: str,
     db_port: str,
     db_user: str,
@@ -94,6 +109,7 @@ def main(
     vela_db_name: str,
     carina_db_name: str,
     unallocated_rewards_to_create: int,
+    setup_retailer: bool,
 ) -> None:
 
     if max_val < 0:
@@ -110,19 +126,36 @@ def main(
         db_host,
         db_port,
     )
-    polaris_db_uri = db_uri + polaris_db_name
-    vela_db_uri = db_uri + vela_db_name
-    carina_db_uri = db_uri + carina_db_name
-    generate_account_holders_and_rewards(
-        account_holders_to_create,
-        retailer,
-        campaign,
-        max_val,
-        polaris_db_uri,
-        vela_db_uri,
-        carina_db_uri,
-        unallocated_rewards_to_create,
-    )
+
+    carina_db_session = load_carina_models(db_uri + carina_db_name)
+    polaris_db_session = load_polaris_models(db_uri + polaris_db_name)
+    vela_db_session = load_vela_models(db_uri + vela_db_name)
+    try:
+        if setup_retailer is True:
+            generate_retailer_base_config(
+                carina_db_session,
+                polaris_db_session,
+                vela_db_session,
+                retailer,
+                campaign,
+                reward_slug,
+            )
+
+        generate_account_holders_and_rewards(
+            carina_db_session,
+            polaris_db_session,
+            vela_db_session,
+            account_holders_to_create,
+            retailer,
+            campaign,
+            max_val,
+            unallocated_rewards_to_create,
+        )
+    finally:
+        carina_db_session.close()
+        polaris_db_session.close()
+        vela_db_session.close()
+
     click.echo("\naccount holders and rewards created.")
     sys.exit(0)
 

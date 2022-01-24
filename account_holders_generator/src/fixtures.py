@@ -138,3 +138,75 @@ def reward_payload(reward_uuid: UUID, reward_code: str, voucher_config_id: int, 
         "retailer_slug": retailer_slug,
         "deleted": False,
     }
+
+
+def retailer_config_payload(retailer_slug: str) -> dict:
+    retailer_name = retailer_slug.replace("-", " ").title()
+    return {
+        "name": retailer_name,
+        "slug": retailer_slug,
+        "account_number_prefix": "RTST",
+        "profile_config": (
+            "email:"
+            "\n  required: true"
+            "\nfirst_name:"
+            "\n  required: true"
+            "\nlast_name:"
+            "\n  required: true"
+            "\ndate_of_birth:"
+            "\n  required: true"
+            "\nphone:"
+            "\n  required: true"
+            "\naddress_line1:"
+            "\n  required: true"
+            "\naddress_line2:"
+            "\n  required: true"
+            "\npostcode:"
+            "\n  required: true"
+            "\ncity:"
+            "\n  required: true"
+        ),
+        "marketing_preference_config": "marketing_pref:\n  type: boolean\n  label: Sample Question?",
+        "loyalty_name": retailer_name,
+        "email_header_image": f"{retailer_slug}-banner.png",
+        "welcome_email_from": f"{retailer_name} <no-reply@test.com>",
+        "welcome_email_subject": f"Welcome to {retailer_name}!",
+    }
+
+
+def campaign_payload(retailer_id: int, campaign_slug: str) -> dict:
+    return {
+        "retailer_id": retailer_id,
+        "status": "ACTIVE",
+        "name": campaign_slug.replace("-", " ").title(),
+        "slug": campaign_slug,
+        "start_date": datetime.now(tz=timezone.utc) - timedelta(minutes=5),
+        "earn_inc_is_tx_value": False,
+    }
+
+
+def reward_rule_payload(campaign_id: int, reward_slug: str) -> dict:
+    return {
+        "campaign_id": campaign_id,
+        "voucher_type_slug": reward_slug,
+        "reward_goal": 200,
+    }
+
+
+def earn_rule_payload(campaign_id: int) -> dict:
+    return {
+        "campaign_id": campaign_id,
+        "threshold": 500,
+        "increment": 300,
+        "increment_multiplier": 1.25,
+    }
+
+
+def reward_config_payload(retailer_slug: str, reward_slug: str) -> dict:
+    return {
+        "voucher_type_slug": reward_slug,
+        "validity_days": 15,
+        "retailer_slug": retailer_slug,
+        "status": "ACTIVE",
+        "fetch_type": "PRE_LOADED",
+    }

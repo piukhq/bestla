@@ -23,6 +23,14 @@ class Campaign(Base):
     __tablename__ = "campaign"
 
 
+class RewardRule(Base):
+    __tablename__ = "reward_rule"
+
+
+class EarnRule(Base):
+    __tablename__ = "earn_rule"
+
+
 def load_models(db_uri: str) -> "Session":
     engine = create_engine(db_uri, poolclass=NullPool)
     Base.prepare(engine, reflect=True)

@@ -1,6 +1,10 @@
 from typing import TYPE_CHECKING
 
-from .db import Campaign, RetailerRewards
+from sqlalchemy import delete
+from sqlalchemy.future import select
+
+from ..fixtures import campaign_payload, earn_rule_payload, reward_rule_payload
+from .db import Campaign, EarnRule, RetailerRewards, RewardRule
 
 if TYPE_CHECKING:
     from sqlalchemy.orm import Session
@@ -9,16 +13,34 @@ if TYPE_CHECKING:
 
 
 def get_active_campaigns(db_session: "Session", retailer: "RetailerConfig", campaign_default: str) -> list[str]:
-    campaigns = (
-        db_session.query(Campaign.slug)
-        .join(RetailerRewards)
-        .filter(
-            RetailerRewards.slug == retailer.slug,
+    campaigns = db_session.scalars(
+        select(Campaign.slug).where(
             Campaign.status == "ACTIVE",
+            Campaign.retailer_id == RetailerRewards.id,
+            RetailerRewards.slug == retailer.slug,
         )
-        .all()
     )
+
     if not campaigns:
         return [campaign_default]
     else:
         return [campaign[0] for campaign in campaigns]
+
+
+def setup_retailer_reward_and_campaign(
+    db_session: "Session", retailer_slug: str, campaign_slug: str, reward_slug: str
+) -> None:
+    db_session.execute(
+        delete(RetailerRewards)
+        .where(RetailerRewards.slug == retailer_slug)
+        .execution_options(synchronize_session=False)
+    )
+    retailer = RetailerRewards(slug=retailer_slug)
+    db_session.add(retailer)
+    db_session.flush()
+    campaign = Campaign(**campaign_payload(retailer.id, campaign_slug))
+    db_session.add(campaign)
+    db_session.flush()
+    db_session.add(RewardRule(**reward_rule_payload(campaign.id, reward_slug)))
+    db_session.add(EarnRule(**earn_rule_payload(campaign.id)))
+    db_session.commit()
