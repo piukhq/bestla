@@ -9,14 +9,14 @@ from sqlalchemy import delete
 from sqlalchemy.future import select
 
 from ..fixtures import reward_config_payload
-from .db import Voucher, VoucherConfig
+from .db import Reward, RewardConfig
 
 if TYPE_CHECKING:
     from sqlalchemy.orm import Session
 
 
-def get_reward_config_by_retailer(db_session: "Session", retailer_slug: str) -> VoucherConfig:
-    reward_config = db_session.scalar(select(VoucherConfig).where(VoucherConfig.retailer_slug == retailer_slug))
+def get_reward_config_by_retailer(db_session: "Session", retailer_slug: str) -> RewardConfig:
+    reward_config = db_session.scalar(select(RewardConfig).where(RewardConfig.retailer_slug == retailer_slug))
     if not reward_config:
         click.echo(f"No reward config found for retailer: {retailer_slug}")
         sys.exit(-1)
@@ -25,16 +25,16 @@ def get_reward_config_by_retailer(db_session: "Session", retailer_slug: str) -> 
 
 
 def create_unallocated_rewards(
-    unallocated_rewards_to_create: int, batch_reward_salt: str, voucher_config: VoucherConfig, retailer_slug: str
-) -> list[Voucher]:
+    unallocated_rewards_to_create: int, batch_reward_salt: str, reward_config: RewardConfig, retailer_slug: str
+) -> list[Reward]:
     hashids = Hashids(batch_reward_salt, min_length=15)
     unallocated_rewards = []
     for i in range(unallocated_rewards_to_create):
-        voucher_code = (hashids.encode(i),)
+        code = (hashids.encode(i),)
         unallocated_rewards.append(
-            Voucher(
-                voucher_code=voucher_code,
-                voucher_config_id=voucher_config.id,
+            Reward(
+                code=code,
+                reward_config_id=reward_config.id,
                 allocated=False,
                 retailer_slug=retailer_slug,
                 deleted=False,
@@ -45,23 +45,23 @@ def create_unallocated_rewards(
 
 
 def persist_allocated_rewards(db_session: "Session", matching_rewards_payloads: list[dict]) -> None:
-    db_session.bulk_save_objects([Voucher(**payload) for payload in matching_rewards_payloads])
+    db_session.bulk_save_objects([Reward(**payload) for payload in matching_rewards_payloads])
     db_session.commit()
 
 
-def setup_voucher_config(db_session: "Session", retailer_slug: str, reward_slug: str) -> None:
+def setup_reward_config(db_session: "Session", retailer_slug: str, reward_slug: str) -> None:
     db_session.execute(
-        delete(Voucher)
+        delete(Reward)
         .where(
-            Voucher.voucher_config_id == VoucherConfig.id,
-            VoucherConfig.retailer_slug == retailer_slug,
+            Reward.reward_config_id == RewardConfig.id,
+            RewardConfig.retailer_slug == retailer_slug,
         )
         .execution_options(synchronize_session=False)
     )
     db_session.execute(
-        delete(VoucherConfig)
-        .where(VoucherConfig.retailer_slug == retailer_slug)
+        delete(RewardConfig)
+        .where(RewardConfig.retailer_slug == retailer_slug)
         .execution_options(synchronize_session=False)
     )
-    db_session.add(VoucherConfig(**reward_config_payload(retailer_slug, reward_slug)))
+    db_session.add(RewardConfig(**reward_config_payload(retailer_slug, reward_slug)))
     db_session.commit()

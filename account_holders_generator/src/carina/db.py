@@ -17,15 +17,15 @@ metadata = MetaData()
 Base: "AutomapBase" = automap_base(metadata=metadata)
 
 
-class Voucher(Base):
-    __tablename__ = "voucher"
+class Reward(Base):
+    __tablename__ = "reward"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
-    voucher_config_id = Column(Integer, ForeignKey("voucher_config.id", ondelete="CASCADE"), nullable=False)
+    reward_config_id = Column(Integer, ForeignKey("reward_config.id", ondelete="CASCADE"), nullable=False)
 
 
-class VoucherConfig(Base):
-    __tablename__ = "voucher_config"
+class RewardConfig(Base):
+    __tablename__ = "reward_config"
 
 
 def load_models(db_uri: str) -> "Session":

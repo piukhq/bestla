@@ -34,7 +34,7 @@ if TYPE_CHECKING:
     from progressbar import ProgressBar
     from sqlalchemy.orm import Session
 
-    from ..carina.db import VoucherConfig
+    from ..carina.db import RewardConfig
 
 
 def get_retailer_by_slug(db_session: "Session", retailer_slug: str) -> RetailerConfig:
@@ -58,7 +58,7 @@ def batch_create_account_holders_and_rewards(
     bar: "ProgressBar",
     progress_counter: int,
     account_holder_type_reward_code_salt: str,
-    voucher_config: "VoucherConfig",
+    reward_config: "RewardConfig",
 ) -> tuple[int, list[dict]]:
 
     account_holders_batch = []
@@ -85,7 +85,7 @@ def batch_create_account_holders_and_rewards(
             AccountHolderMarketingPreference(**account_holder_marketing_preference_payload(account_holder))
         )
         account_holder_rewards, matching_rewards_payloads = _generate_account_holder_rewards(
-            i, account_holder, account_holder_type_reward_code_salt, voucher_config, retailer
+            i, account_holder, account_holder_type_reward_code_salt, reward_config, retailer
         )
         matching_rewards_payloads_batch.extend(matching_rewards_payloads)
         account_holder_rewards_batch.extend(account_holder_rewards)
@@ -105,7 +105,7 @@ def _generate_account_holder_rewards(
     account_holder_n: Union[int, str],
     account_holder: AccountHolder,
     batch_reward_salt: str,
-    voucher_config: "VoucherConfig",
+    reward_config: "RewardConfig",
     retailer: RetailerConfig,
 ) -> tuple[list[AccountHolderReward], list[dict]]:
     hashids = Hashids(batch_reward_salt, min_length=15)
@@ -120,7 +120,7 @@ def _generate_account_holder_rewards(
             for j in range(how_many):
                 reward_uuid = uuid4()
                 reward_code = hashids.encode(i, j, account_holder_n)
-                reward_slug = voucher_config.voucher_type_slug
+                reward_slug = reward_config.reward_slug
                 account_holder_rewards.append(
                     AccountHolderReward(
                         **account_holder_reward_payload(
@@ -129,7 +129,7 @@ def _generate_account_holder_rewards(
                             reward_uuid=reward_uuid,
                             reward_code=reward_code,
                             reward_slug=reward_slug,
-                            voucher_status=reward_status,
+                            reward_status=reward_status,
                             issue_date=issue_date,
                         )
                     )
@@ -139,7 +139,7 @@ def _generate_account_holder_rewards(
                     reward_payload(
                         reward_uuid=reward_uuid,
                         reward_code=reward_code,
-                        voucher_config_id=voucher_config.id,
+                        reward_config_id=reward_config.id,
                         retailer_slug=retailer.slug,
                     )
                 )
