@@ -101,7 +101,7 @@ def account_holder_reward_payload(
     reward_uuid: UUID,
     reward_code: str,
     reward_slug: str,
-    voucher_status: AccountHolderRewardStatuses,
+    reward_status: AccountHolderRewardStatuses,
     issue_date: datetime,
 ) -> dict:
     now = datetime.now(tz=timezone.utc)
@@ -113,27 +113,27 @@ def account_holder_reward_payload(
         "code": reward_code,
         "reward_slug": reward_slug,
         "status": AccountHolderRewardStatuses.ISSUED.value
-        if voucher_status == AccountHolderRewardStatuses.EXPIRED
-        else voucher_status.value,
+        if reward_status == AccountHolderRewardStatuses.EXPIRED
+        else reward_status.value,
         "issued_date": issue_date,
         "expiry_date": now - timedelta(days=randint(2, 10))
-        if voucher_status == AccountHolderRewardStatuses.EXPIRED
+        if reward_status == AccountHolderRewardStatuses.EXPIRED
         else datetime(2030, 1, 1),
         "redeemed_date": now - timedelta(days=randint(2, 10))
-        if voucher_status == AccountHolderRewardStatuses.REDEEMED
+        if reward_status == AccountHolderRewardStatuses.REDEEMED
         else None,
         "cancelled_date": now - timedelta(days=randint(2, 10))
-        if voucher_status == AccountHolderRewardStatuses.CANCELLED
+        if reward_status == AccountHolderRewardStatuses.CANCELLED
         else None,
         "idempotency_token": str(uuid4()),
     }
 
 
-def reward_payload(reward_uuid: UUID, reward_code: str, voucher_config_id: int, retailer_slug: str) -> dict:
+def reward_payload(reward_uuid: UUID, reward_code: str, reward_config_id: int, retailer_slug: str) -> dict:
     return {
         "id": reward_uuid,
-        "voucher_code": reward_code,
-        "voucher_config_id": voucher_config_id,
+        "code": reward_code,
+        "reward_config_id": reward_config_id,
         "allocated": True,
         "retailer_slug": retailer_slug,
         "deleted": False,
@@ -188,7 +188,7 @@ def campaign_payload(retailer_id: int, campaign_slug: str) -> dict:
 def reward_rule_payload(campaign_id: int, reward_slug: str) -> dict:
     return {
         "campaign_id": campaign_id,
-        "voucher_type_slug": reward_slug,
+        "reward_slug": reward_slug,
         "reward_goal": 200,
     }
 
@@ -204,7 +204,7 @@ def earn_rule_payload(campaign_id: int) -> dict:
 
 def reward_config_payload(retailer_slug: str, reward_slug: str) -> dict:
     return {
-        "voucher_type_slug": reward_slug,
+        "reward_slug": reward_slug,
         "validity_days": 15,
         "retailer_slug": retailer_slug,
         "status": "ACTIVE",
