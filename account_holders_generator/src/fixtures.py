@@ -181,7 +181,7 @@ def campaign_payload(retailer_id: int, campaign_slug: str) -> dict:
         "name": campaign_slug.replace("-", " ").title(),
         "slug": campaign_slug,
         "start_date": datetime.now(tz=timezone.utc) - timedelta(minutes=5),
-        "earn_inc_is_tx_value": False,
+        "loyalty_type": "STAMPS",
     }
 
 
