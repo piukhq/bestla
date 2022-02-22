@@ -24,7 +24,7 @@ def get_active_campaigns(db_session: "Session", retailer: "RetailerConfig", camp
     if not campaigns:
         return [campaign_default]
     else:
-        return [campaign[0] for campaign in campaigns]
+        return [campaign for campaign in campaigns]
 
 
 def setup_retailer_reward_and_campaign(
