@@ -95,6 +95,12 @@ from .src.vela.db import load_models as load_vela_models
     default=False,
     help=("Sets up retailer, campaign, and reward config in addition to the usual account holders and rewards."),
 )
+@click.option(
+    "--refund-window",
+    "refund_window",
+    default=0,
+    help="Sets a refund window for reward rule. If reward goal is reached, pending rewards are created.",
+)
 def main(
     account_holders_to_create: int,
     retailer: str,
@@ -110,6 +116,7 @@ def main(
     carina_db_name: str,
     unallocated_rewards_to_create: int,
     setup_retailer: bool,
+    refund_window: int,
 ) -> None:
 
     if max_val < 0:
@@ -139,6 +146,7 @@ def main(
                 retailer,
                 campaign,
                 reward_slug,
+                refund_window,
             )
 
         generate_account_holders_and_rewards(
@@ -150,6 +158,7 @@ def main(
             campaign,
             max_val,
             unallocated_rewards_to_create,
+            refund_window,
         )
     finally:
         carina_db_session.close()

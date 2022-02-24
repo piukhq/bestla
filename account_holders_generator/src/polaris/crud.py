@@ -16,6 +16,7 @@ from ..fixtures import (
     ACCOUNT_HOLDER_REWARD_SWITCHER,
     account_holder_marketing_preference_payload,
     account_holder_payload,
+    account_holder_pending_reward_payload,
     account_holder_profile_payload,
     account_holder_reward_payload,
     retailer_config_payload,
@@ -26,6 +27,7 @@ from .db import (
     AccountHolderMarketingPreference,
     AccountHolderProfile,
     AccountHolderReward,
+    PendingReward,
     RetailerConfig,
 )
 from .utils import generate_account_holder_campaign_balances
@@ -59,6 +61,7 @@ def batch_create_account_holders_and_rewards(
     progress_counter: int,
     account_holder_type_reward_code_salt: str,
     reward_config: "RewardConfig",
+    refund_window: int,
 ) -> tuple[int, list[dict]]:
 
     account_holders_batch = []
@@ -89,6 +92,11 @@ def batch_create_account_holders_and_rewards(
         )
         matching_rewards_payloads_batch.extend(matching_rewards_payloads)
         account_holder_rewards_batch.extend(account_holder_rewards)
+        if refund_window > 0:
+            account_holder_pending_rewards = _generate_account_holder_pending_rewards(
+                account_holder, reward_config, retailer, active_campaigns, refund_window
+            )
+            db_session.bulk_save_objects(account_holder_pending_rewards)
         progress_counter += 1
         bar.update(progress_counter)
 
@@ -148,6 +156,32 @@ def _generate_account_holder_rewards(
 
     account_holder_reward_type = int(account_holder_n) % 10
     return _generate_rewards(ACCOUNT_HOLDER_REWARD_SWITCHER[account_holder_reward_type])
+
+
+def _generate_account_holder_pending_rewards(
+    account_holder: AccountHolder,
+    reward_config: "RewardConfig",
+    retailer: RetailerConfig,
+    active_campaigns: list[str],
+    refund_window: int,
+) -> list[PendingReward]:
+
+    account_holder_pending_rewards: list[PendingReward] = []
+    for _ in range(5):
+        reward_slug = reward_config.reward_slug
+        account_holder_pending_rewards.append(
+            PendingReward(
+                **account_holder_pending_reward_payload(
+                    account_holder_id=account_holder.id,
+                    retailer_slug=retailer.slug,
+                    reward_slug=reward_slug,
+                    campaign_slug=active_campaigns[0],
+                    refund_window=refund_window,
+                )
+            )
+        )
+
+    return account_holder_pending_rewards
 
 
 def clear_existing_account_holders(db_session: "Session", retailer_id: int) -> None:

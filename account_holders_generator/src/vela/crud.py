@@ -28,7 +28,7 @@ def get_active_campaigns(db_session: "Session", retailer: "RetailerConfig", camp
 
 
 def setup_retailer_reward_and_campaign(
-    db_session: "Session", retailer_slug: str, campaign_slug: str, reward_slug: str
+    db_session: "Session", retailer_slug: str, campaign_slug: str, reward_slug: str, refund_window: int
 ) -> None:
     db_session.execute(
         delete(RetailerRewards)
@@ -41,6 +41,6 @@ def setup_retailer_reward_and_campaign(
     campaign = Campaign(**campaign_payload(retailer.id, campaign_slug))
     db_session.add(campaign)
     db_session.flush()
-    db_session.add(RewardRule(**reward_rule_payload(campaign.id, reward_slug)))
+    db_session.add(RewardRule(**reward_rule_payload(campaign.id, reward_slug, refund_window)))
     db_session.add(EarnRule(**earn_rule_payload(campaign.id)))
     db_session.commit()
