@@ -129,6 +129,27 @@ def account_holder_reward_payload(
     }
 
 
+def account_holder_pending_reward_payload(
+    account_holder_id: int,
+    retailer_slug: str,
+    reward_slug: str,
+    campaign_slug: str,
+    refund_window: int,
+) -> dict:
+    now = datetime.now(tz=timezone.utc)
+
+    return {
+        "created_date": now,
+        "conversion_date": now + timedelta(days=refund_window),
+        "value": 200,
+        "account_holder_id": account_holder_id,
+        "retailer_slug": retailer_slug,
+        "campaign_slug": campaign_slug,
+        "reward_slug": reward_slug,
+        "idempotency_token": str(uuid4()),
+    }
+
+
 def reward_payload(reward_uuid: UUID, reward_code: str, reward_config_id: int, retailer_slug: str) -> dict:
     return {
         "id": reward_uuid,
@@ -185,12 +206,16 @@ def campaign_payload(retailer_id: int, campaign_slug: str) -> dict:
     }
 
 
-def reward_rule_payload(campaign_id: int, reward_slug: str) -> dict:
-    return {
+def reward_rule_payload(campaign_id: int, reward_slug: str, refund_window: int) -> dict:
+    payload = {
         "campaign_id": campaign_id,
         "reward_slug": reward_slug,
         "reward_goal": 200,
     }
+    if refund_window is not None:
+        payload.update({"allocation_window": refund_window})
+
+    return payload
 
 
 def earn_rule_payload(campaign_id: int) -> dict:
