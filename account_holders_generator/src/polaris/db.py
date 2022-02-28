@@ -48,8 +48,8 @@ class AccountHolderReward(Base):
     account_holder_id = Column(BIGINT, ForeignKey("account_holder.id", ondelete="CASCADE"))
 
 
-class PendingReward(Base):
-    __tablename__ = "pending_reward"
+class AccountHolderPendingReward(Base):
+    __tablename__ = "account_holder_pending_reward"
 
     account_holder_id = Column(BIGINT, ForeignKey("account_holder.id", ondelete="CASCADE"))
 
