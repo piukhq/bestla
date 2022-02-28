@@ -25,9 +25,9 @@ from ..fixtures import (
 from .db import (
     AccountHolder,
     AccountHolderMarketingPreference,
+    AccountHolderPendingReward,
     AccountHolderProfile,
     AccountHolderReward,
-    PendingReward,
     RetailerConfig,
 )
 from .utils import generate_account_holder_campaign_balances
@@ -164,13 +164,13 @@ def _generate_account_holder_pending_rewards(
     retailer: RetailerConfig,
     active_campaigns: list[str],
     refund_window: int,
-) -> list[PendingReward]:
+) -> list[AccountHolderPendingReward]:
 
-    account_holder_pending_rewards: list[PendingReward] = []
+    account_holder_pending_rewards: list[AccountHolderPendingReward] = []
     for _ in range(5):
         reward_slug = reward_config.reward_slug
         account_holder_pending_rewards.append(
-            PendingReward(
+            AccountHolderPendingReward(
                 **account_holder_pending_reward_payload(
                     account_holder_id=account_holder.id,
                     retailer_slug=retailer.slug,
