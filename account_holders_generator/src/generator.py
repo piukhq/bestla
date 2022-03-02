@@ -7,7 +7,7 @@ from progressbar import ProgressBar
 
 from .carina.crud import (
     create_unallocated_rewards,
-    get_reward_config_by_retailer,
+    get_reward_config_and_retailer,
     persist_allocated_rewards,
     setup_reward_config,
 )
@@ -38,19 +38,18 @@ def generate_account_holders_and_rewards(
     refund_window: int,
 ) -> None:
 
-    retailer = get_retailer_by_slug(polaris_db_session, retailer_slug)
-    click.echo("Selected retailer: %s" % retailer.name)
-    reward_config = get_reward_config_by_retailer(carina_db_session, retailer_slug)
-    click.echo(f"Reward slug for {retailer.name}: {reward_config.reward_slug}")
-    active_campaigns = get_active_campaigns(vela_db_session, retailer, campaign_slug)
+    retailer_config = get_retailer_by_slug(polaris_db_session, retailer_slug)
+    click.echo("Selected retailer: %s" % retailer_config.name)
+    reward_config, retailer = get_reward_config_and_retailer(carina_db_session, retailer_slug)
+    click.echo(f"Reward slug for {retailer_config.name}: {reward_config.reward_slug}")
+    active_campaigns = get_active_campaigns(vela_db_session, retailer_config, campaign_slug)
     click.echo("Selected campaign %s." % campaign_slug)
     click.echo("Deleting previously generated account holders for requested retailer.")
-    clear_existing_account_holders(polaris_db_session, retailer.id)
+    clear_existing_account_holders(polaris_db_session, retailer_config.id)
     unallocated_rewards_batch = create_unallocated_rewards(
         unallocated_rewards_to_create=unallocated_rewards_to_create,
         batch_reward_salt=str(uuid4()),
         reward_config=reward_config,
-        retailer_slug=retailer_slug,
     )
     carina_db_session.bulk_save_objects(unallocated_rewards_batch)
     carina_db_session.commit()
@@ -74,6 +73,7 @@ def generate_account_holders_and_rewards(
                     batch_end=batch_end,
                     account_holder_type=account_holder_type,
                     retailer=retailer,
+                    retailer_config=retailer_config,
                     active_campaigns=active_campaigns,
                     max_val=max_val,
                     bar=bar,
@@ -94,10 +94,11 @@ def generate_retailer_base_config(
     campaign_slug: str,
     reward_slug: str,
     refund_window: int,
+    fetch_type: str,
 ) -> None:
     click.echo("Creating '%s' retailer in Polaris." % retailer_slug)
     setup_retailer_config(polaris_db_session, retailer_slug)
     click.echo("Creating '%s' campaign in Vela." % campaign_slug)
     setup_retailer_reward_and_campaign(vela_db_session, retailer_slug, campaign_slug, reward_slug, refund_window)
     click.echo("Creating '%s' reward config in Carina." % reward_slug)
-    setup_reward_config(carina_db_session, retailer_slug, reward_slug)
+    setup_reward_config(carina_db_session, retailer_slug, reward_slug, fetch_type)

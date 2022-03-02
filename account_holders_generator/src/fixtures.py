@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta, timezone
 from random import randint
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Optional
 from uuid import UUID, uuid4
 
 from faker import Faker
@@ -50,14 +50,14 @@ ACCOUNT_HOLDER_REWARD_SWITCHER: dict[int, list] = {
 
 
 def account_holder_payload(
-    account_holder_n: int, account_holder_type: "AccountHolderTypes", retailer: "RetailerConfig"
+    account_holder_n: int, account_holder_type: "AccountHolderTypes", retailer_config: "RetailerConfig"
 ) -> dict:
     return {
         "email": generate_email(account_holder_type, account_holder_n),
-        "retailer_id": retailer.id,
+        "retailer_id": retailer_config.id,
         "status": "ACTIVE",
         "account_number": generate_account_number(
-            retailer.account_number_prefix, account_holder_type, account_holder_n
+            retailer_config.account_number_prefix, account_holder_type, account_holder_n
         ),
         "is_superuser": False,
         "is_active": True,
@@ -150,13 +150,13 @@ def account_holder_pending_reward_payload(
     }
 
 
-def reward_payload(reward_uuid: UUID, reward_code: str, reward_config_id: int, retailer_slug: str) -> dict:
+def reward_payload(reward_uuid: UUID, reward_code: str, reward_config_id: int, retailer_id: int) -> dict:
     return {
         "id": reward_uuid,
         "code": reward_code,
         "reward_config_id": reward_config_id,
         "allocated": True,
-        "retailer_slug": retailer_slug,
+        "retailer_id": retailer_id,
         "deleted": False,
     }
 
@@ -227,11 +227,26 @@ def earn_rule_payload(campaign_id: int) -> dict:
     }
 
 
-def reward_config_payload(retailer_slug: str, reward_slug: str) -> dict:
-    return {
+def reward_config_payload(
+    retailer_id: int, reward_slug: str, fetch_type_id: int, required_fields_values: Optional[str] = None
+) -> dict:
+    payload = {
         "reward_slug": reward_slug,
-        "validity_days": 15,
-        "retailer_slug": retailer_slug,
+        "retailer_id": retailer_id,
         "status": "ACTIVE",
-        "fetch_type": "PRE_LOADED",
+        "fetch_type_id": fetch_type_id,
     }
+    if required_fields_values:
+        payload.update({"required_fields_values": required_fields_values})
+    return payload
+
+
+def carina_retailer_payload(retailer_slug: str) -> dict:
+    return {"slug": retailer_slug}
+
+
+def retailer_fetch_type_payload(retailer_id: int, fetch_type_id: int, agent_config: Optional[str] = None) -> dict:
+    payload: dict[str, Any] = {"retailer_id": retailer_id, "fetch_type_id": fetch_type_id}
+    if agent_config:
+        payload["agent_config"] = agent_config
+    return payload
