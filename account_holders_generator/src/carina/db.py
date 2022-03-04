@@ -22,10 +22,23 @@ class Reward(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
     reward_config_id = Column(Integer, ForeignKey("reward_config.id", ondelete="CASCADE"), nullable=False)
+    retailer_id = Column(Integer, ForeignKey("retailer.id", ondelete="CASCADE"), nullable=False)
 
 
 class RewardConfig(Base):
     __tablename__ = "reward_config"
+
+
+class Retailer(Base):
+    __tablename__ = "retailer"
+
+
+class FetchType(Base):
+    __tablename__ = "fetch_type"
+
+
+class RetailerFetchType(Base):
+    __tablename__ = "retailer_fetch_type"
 
 
 def load_models(db_uri: str) -> "Session":

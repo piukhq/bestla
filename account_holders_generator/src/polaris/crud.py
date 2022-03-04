@@ -10,6 +10,7 @@ from hashids import Hashids
 from sqlalchemy import delete
 from sqlalchemy.future import select
 
+from account_holders_generator.src.carina.db import Retailer
 from account_holders_generator.src.enums import AccountHolderRewardStatuses, AccountHolderTypes
 
 from ..fixtures import (
@@ -54,7 +55,8 @@ def batch_create_account_holders_and_rewards(
     batch_start: int,
     batch_end: int,
     account_holder_type: AccountHolderTypes,
-    retailer: RetailerConfig,
+    retailer: Retailer,
+    retailer_config: RetailerConfig,
     active_campaigns: list[str],
     max_val: int,
     bar: "ProgressBar",
@@ -74,7 +76,7 @@ def batch_create_account_holders_and_rewards(
     batch_range = range(batch_start, batch_end, -1)
 
     account_holders_batch = [
-        AccountHolder(**account_holder_payload(i, account_holder_type, retailer)) for i in batch_range
+        AccountHolder(**account_holder_payload(i, account_holder_type, retailer_config)) for i in batch_range
     ]
     db_session.add_all(account_holders_batch)
     db_session.flush()
@@ -88,13 +90,13 @@ def batch_create_account_holders_and_rewards(
             AccountHolderMarketingPreference(**account_holder_marketing_preference_payload(account_holder))
         )
         account_holder_rewards, matching_rewards_payloads = _generate_account_holder_rewards(
-            i, account_holder, account_holder_type_reward_code_salt, reward_config, retailer
+            i, account_holder, account_holder_type_reward_code_salt, reward_config, retailer, retailer_config
         )
         matching_rewards_payloads_batch.extend(matching_rewards_payloads)
         account_holder_rewards_batch.extend(account_holder_rewards)
         if refund_window > 0:
             account_holder_pending_rewards = _generate_account_holder_pending_rewards(
-                account_holder, reward_config, retailer, active_campaigns, refund_window
+                account_holder, reward_config, retailer_config, active_campaigns, refund_window
             )
             db_session.bulk_save_objects(account_holder_pending_rewards)
         progress_counter += 1
@@ -114,7 +116,8 @@ def _generate_account_holder_rewards(
     account_holder: AccountHolder,
     batch_reward_salt: str,
     reward_config: "RewardConfig",
-    retailer: RetailerConfig,
+    retailer: Retailer,
+    retailer_config: RetailerConfig,
 ) -> tuple[list[AccountHolderReward], list[dict]]:
     hashids = Hashids(batch_reward_salt, min_length=15)
 
@@ -133,7 +136,7 @@ def _generate_account_holder_rewards(
                     AccountHolderReward(
                         **account_holder_reward_payload(
                             account_holder_id=account_holder.id,
-                            retailer_slug=retailer.slug,
+                            retailer_slug=retailer_config.slug,
                             reward_uuid=reward_uuid,
                             reward_code=reward_code,
                             reward_slug=reward_slug,
@@ -148,7 +151,7 @@ def _generate_account_holder_rewards(
                         reward_uuid=reward_uuid,
                         reward_code=reward_code,
                         reward_config_id=reward_config.id,
-                        retailer_slug=retailer.slug,
+                        retailer_id=retailer.id,
                     )
                 )
 
@@ -161,7 +164,7 @@ def _generate_account_holder_rewards(
 def _generate_account_holder_pending_rewards(
     account_holder: AccountHolder,
     reward_config: "RewardConfig",
-    retailer: RetailerConfig,
+    retailer_config: RetailerConfig,
     active_campaigns: list[str],
     refund_window: int,
 ) -> list[AccountHolderPendingReward]:
@@ -173,7 +176,7 @@ def _generate_account_holder_pending_rewards(
             AccountHolderPendingReward(
                 **account_holder_pending_reward_payload(
                     account_holder_id=account_holder.id,
-                    retailer_slug=retailer.slug,
+                    retailer_slug=retailer_config.slug,
                     reward_slug=reward_slug,
                     campaign_slug=active_campaigns[0],
                     refund_window=refund_window,

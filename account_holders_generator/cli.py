@@ -101,6 +101,12 @@ from .src.vela.db import load_models as load_vela_models
     default=0,
     help="Sets a refund window for reward rule. If reward goal is reached, pending rewards are created.",
 )
+@click.option(
+    "--fetch-type",
+    "fetch_type",
+    default="PRE_LOADED",
+    help="Sets a fetch type for rewards that are generated. There are only a select few types",
+)
 def main(
     account_holders_to_create: int,
     retailer: str,
@@ -117,6 +123,7 @@ def main(
     unallocated_rewards_to_create: int,
     setup_retailer: bool,
     refund_window: int,
+    fetch_type: str,
 ) -> None:
 
     if max_val < 0:
@@ -147,6 +154,7 @@ def main(
                 campaign,
                 reward_slug,
                 refund_window,
+                fetch_type,
             )
 
         generate_account_holders_and_rewards(

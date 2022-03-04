@@ -17,3 +17,8 @@ class AccountHolderRewardStatuses(Enum):
     CANCELLED = "CANCELLED"
     EXPIRED = "EXPIRED"
     REDEEMED = "REDEEMED"
+
+
+class FetchTypesEnum(Enum):
+    PRE_LOADED = "PRE_LOADED"
+    JIGSAW_EGIFT = "JIGSAW_EGIFT"
