@@ -16,35 +16,57 @@ if TYPE_CHECKING:
 fake = Faker(["en-GB"])
 
 ACCOUNT_HOLDER_REWARD_SWITCHER: dict[int, list] = {
-    1: [],
-    2: [],
-    3: [(1, AccountHolderRewardStatuses.ISSUED)],
-    4: [
+    0: [],
+    1: [(1, AccountHolderRewardStatuses.ISSUED)],
+    2: [
         (1, AccountHolderRewardStatuses.ISSUED),
         (1, AccountHolderRewardStatuses.EXPIRED),
-        (1, AccountHolderRewardStatuses.REDEEMED),
+    ],
+    3: [
+        (3, AccountHolderRewardStatuses.ISSUED),
+        (3, AccountHolderRewardStatuses.REDEEMED),
+    ],
+    4: [
+        (1, AccountHolderRewardStatuses.ISSUED),
         (1, AccountHolderRewardStatuses.CANCELLED),
     ],
     5: [
         (1, AccountHolderRewardStatuses.ISSUED),
-        (1, AccountHolderRewardStatuses.EXPIRED),
+        (1, AccountHolderRewardStatuses.PENDING),
     ],
     6: [
+        (1, AccountHolderRewardStatuses.ISSUED),
         (1, AccountHolderRewardStatuses.EXPIRED),
         (1, AccountHolderRewardStatuses.REDEEMED),
+        (1, AccountHolderRewardStatuses.CANCELLED),
+        (1, AccountHolderRewardStatuses.PENDING),
     ],
-    7: [(1, AccountHolderRewardStatuses.ISSUED)],
+    7: [
+        (2, AccountHolderRewardStatuses.ISSUED),
+    ],
     8: [
+        (3, AccountHolderRewardStatuses.ISSUED),
         (1, AccountHolderRewardStatuses.EXPIRED),
-        (2, AccountHolderRewardStatuses.REDEEMED),
+        (3, AccountHolderRewardStatuses.REDEEMED),
+        (2, AccountHolderRewardStatuses.CANCELLED),
+        (3, AccountHolderRewardStatuses.PENDING),
     ],
     9: [
-        (2, AccountHolderRewardStatuses.ISSUED),
-        (2, AccountHolderRewardStatuses.EXPIRED),
+        (1, AccountHolderRewardStatuses.ISSUED),
+        (3, AccountHolderRewardStatuses.EXPIRED),
+        (2, AccountHolderRewardStatuses.REDEEMED),
+        (1, AccountHolderRewardStatuses.CANCELLED),
+        (4, AccountHolderRewardStatuses.PENDING),
     ],
-    0: [
-        (3, AccountHolderRewardStatuses.ISSUED),
+    10: [
+        (2, AccountHolderRewardStatuses.ISSUED),
+        (4, AccountHolderRewardStatuses.EXPIRED),
         (3, AccountHolderRewardStatuses.REDEEMED),
+        (1, AccountHolderRewardStatuses.CANCELLED),
+        (5, AccountHolderRewardStatuses.PENDING),
+    ],
+    11: [
+        (3, AccountHolderRewardStatuses.PENDING),
     ],
 }
 
@@ -104,7 +126,7 @@ def account_holder_reward_payload(
     reward_status: AccountHolderRewardStatuses,
     issue_date: datetime,
 ) -> dict:
-    now = datetime.now(tz=timezone.utc)
+    now = datetime.now(tz=timezone.utc).replace(microsecond=0)
 
     return {
         "account_holder_id": account_holder_id,
@@ -136,7 +158,7 @@ def account_holder_pending_reward_payload(
     campaign_slug: str,
     refund_window: int,
 ) -> dict:
-    now = datetime.now(tz=timezone.utc)
+    now = datetime.now(tz=timezone.utc).replace(microsecond=0)
 
     return {
         "created_date": now,

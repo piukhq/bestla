@@ -96,7 +96,7 @@ def batch_create_account_holders_and_rewards(
         account_holder_rewards_batch.extend(account_holder_rewards)
         if refund_window > 0:
             account_holder_pending_rewards = _generate_account_holder_pending_rewards(
-                account_holder, reward_config, retailer_config, active_campaigns, refund_window
+                i, account_holder, reward_config, retailer_config, active_campaigns, refund_window
             )
             db_session.bulk_save_objects(account_holder_pending_rewards)
         progress_counter += 1
@@ -127,6 +127,8 @@ def _generate_account_holder_rewards(
         account_holder_rewards: list[AccountHolderReward] = []
         matching_rewards_payloads: list[dict] = []
         for i, (how_many, reward_status) in enumerate(rewards_required):
+            if reward_status == AccountHolderRewardStatuses.PENDING:
+                continue
             issue_date = datetime.now(tz=timezone.utc) - timedelta(days=14)
             for j in range(how_many):
                 reward_uuid = uuid4()
@@ -157,34 +159,43 @@ def _generate_account_holder_rewards(
 
         return account_holder_rewards, matching_rewards_payloads
 
-    account_holder_reward_type = int(account_holder_n) % 10
+    account_holder_reward_type = int(account_holder_n) % 11
     return _generate_rewards(ACCOUNT_HOLDER_REWARD_SWITCHER[account_holder_reward_type])
 
 
 def _generate_account_holder_pending_rewards(
+    account_holder_n: Union[int, str],
     account_holder: AccountHolder,
     reward_config: "RewardConfig",
     retailer_config: RetailerConfig,
     active_campaigns: list[str],
     refund_window: int,
 ) -> list[AccountHolderPendingReward]:
-
-    account_holder_pending_rewards: list[AccountHolderPendingReward] = []
-    for _ in range(5):
-        reward_slug = reward_config.reward_slug
-        account_holder_pending_rewards.append(
-            AccountHolderPendingReward(
-                **account_holder_pending_reward_payload(
-                    account_holder_id=account_holder.id,
-                    retailer_slug=retailer_config.slug,
-                    reward_slug=reward_slug,
-                    campaign_slug=active_campaigns[0],
-                    refund_window=refund_window,
+    def _generate_pending_rewards(
+        pending_rewards_required: list[tuple[int, AccountHolderRewardStatuses]]
+    ) -> list[AccountHolderPendingReward]:
+        account_holder_pending_rewards: list[AccountHolderPendingReward] = []
+        for _, (how_many, reward_status) in enumerate(pending_rewards_required):
+            if reward_status != AccountHolderRewardStatuses.PENDING:
+                continue
+            for _ in range(how_many):
+                reward_slug = reward_config.reward_slug
+                account_holder_pending_rewards.append(
+                    AccountHolderPendingReward(
+                        **account_holder_pending_reward_payload(
+                            account_holder_id=account_holder.id,
+                            retailer_slug=retailer_config.slug,
+                            reward_slug=reward_slug,
+                            campaign_slug=active_campaigns[0],
+                            refund_window=refund_window,
+                        )
+                    )
                 )
-            )
-        )
 
-    return account_holder_pending_rewards
+        return account_holder_pending_rewards
+
+    account_holder_reward_type = int(account_holder_n) % 11
+    return _generate_pending_rewards(ACCOUNT_HOLDER_REWARD_SWITCHER[account_holder_reward_type])
 
 
 def clear_existing_account_holders(db_session: "Session", retailer_id: int) -> None:
