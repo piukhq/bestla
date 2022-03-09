@@ -9,22 +9,32 @@ from .db import Campaign, EarnRule, RetailerRewards, RewardRule
 if TYPE_CHECKING:
     from sqlalchemy.orm import Session
 
+    from account_holders_generator.src.carina.db import RewardConfig
     from account_holders_generator.src.polaris.db import RetailerConfig
 
 
-def get_active_campaigns(db_session: "Session", retailer: "RetailerConfig", campaign_default: str) -> list[str]:
+def get_active_campaigns_and_reward_rules(
+    db_session: "Session", retailer_config: "RetailerConfig", reward_config: "RewardConfig", campaign_default: str
+) -> tuple[list[str], dict]:
     campaigns = db_session.scalars(
-        select(Campaign.slug).where(
+        select(Campaign).where(
             Campaign.status == "ACTIVE",
             Campaign.retailer_id == RetailerRewards.id,
-            RetailerRewards.slug == retailer.slug,
+            RetailerRewards.slug == retailer_config.slug,
         )
-    )
+    ).all()
+    reward_rules = {}
+    for campaign in campaigns:
+        reward_rules[campaign.slug] = db_session.scalars(
+            select(RewardRule).where(
+                RewardRule.reward_slug == reward_config.reward_slug, RewardRule.campaign_id == campaign.id
+            )
+        ).all()
 
     if not campaigns:
-        return [campaign_default]
+        return [campaign_default], reward_rules
     else:
-        return [campaign for campaign in campaigns]
+        return [campaign.slug for campaign in campaigns], reward_rules
 
 
 def setup_retailer_reward_and_campaign(

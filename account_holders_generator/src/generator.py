@@ -18,7 +18,7 @@ from .polaris.crud import (
     get_retailer_by_slug,
     setup_retailer_config,
 )
-from .vela.crud import get_active_campaigns, setup_retailer_reward_and_campaign
+from .vela.crud import get_active_campaigns_and_reward_rules, setup_retailer_reward_and_campaign
 
 if TYPE_CHECKING:
     from sqlalchemy.orm import Session
@@ -42,7 +42,9 @@ def generate_account_holders_and_rewards(
     click.echo("Selected retailer: %s" % retailer_config.name)
     reward_config, retailer = get_reward_config_and_retailer(carina_db_session, retailer_slug)
     click.echo(f"Reward slug for {retailer_config.name}: {reward_config.reward_slug}")
-    active_campaigns = get_active_campaigns(vela_db_session, retailer_config, campaign_slug)
+    active_campaigns, reward_rules = get_active_campaigns_and_reward_rules(
+        vela_db_session, retailer_config, reward_config, campaign_slug
+    )
     click.echo("Selected campaign %s." % campaign_slug)
     click.echo("Deleting previously generated account holders for requested retailer.")
     clear_existing_account_holders(polaris_db_session, retailer_config.id)
@@ -80,6 +82,7 @@ def generate_account_holders_and_rewards(
                     progress_counter=progress_counter,
                     account_holder_type_reward_code_salt=str(uuid4()),
                     reward_config=reward_config,
+                    reward_rules=reward_rules,
                     refund_window=refund_window,
                 )
                 persist_allocated_rewards(carina_db_session, matching_reward_payloads_batch)
