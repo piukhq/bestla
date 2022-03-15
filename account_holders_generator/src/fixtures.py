@@ -81,8 +81,6 @@ def account_holder_payload(
         "account_number": generate_account_number(
             retailer_config.account_number_prefix, account_holder_type, account_holder_n
         ),
-        "is_superuser": False,
-        "is_active": True,
     }
 
 

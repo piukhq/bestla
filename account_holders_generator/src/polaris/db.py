@@ -23,6 +23,7 @@ class AccountHolder(Base):
     __tablename__ = "account_holder"
 
     account_holder_uuid = Column(UUID(as_uuid=True), default=uuid.uuid4)
+    opt_out_token = Column(UUID(as_uuid=True), default=uuid.uuid4)
 
 
 class RetailerConfig(Base):
