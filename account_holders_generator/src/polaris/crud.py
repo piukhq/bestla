@@ -188,6 +188,7 @@ def _generate_account_holder_pending_rewards(
                             reward_slug=reward_slug,
                             campaign_slug=active_campaigns[0],
                             refund_window=refund_window,
+                            enqueued=False,
                         )
                     )
                 )

@@ -155,6 +155,7 @@ def account_holder_pending_reward_payload(
     reward_slug: str,
     campaign_slug: str,
     refund_window: int,
+    enqueued: bool,
 ) -> dict:
     now = datetime.now(tz=timezone.utc).replace(microsecond=0)
 
@@ -167,6 +168,7 @@ def account_holder_pending_reward_payload(
         "campaign_slug": campaign_slug,
         "reward_slug": reward_slug,
         "idempotency_token": str(uuid4()),
+        "enqueued": enqueued,
     }
 
 
