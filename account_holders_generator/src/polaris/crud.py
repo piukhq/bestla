@@ -63,6 +63,7 @@ def batch_create_account_holders_and_rewards(
     progress_counter: int,
     account_holder_type_reward_code_salt: str,
     reward_config: "RewardConfig",
+    reward_rules: dict,
     refund_window: int,
 ) -> tuple[int, list[dict]]:
 
@@ -72,6 +73,7 @@ def batch_create_account_holders_and_rewards(
     account_holder_balance_batch = []
 
     account_holder_rewards_batch = []
+    account_holder_pending_rewards_batch = []
     matching_rewards_payloads_batch = []
     batch_range = range(batch_start, batch_end, -1)
 
@@ -94,11 +96,10 @@ def batch_create_account_holders_and_rewards(
         )
         matching_rewards_payloads_batch.extend(matching_rewards_payloads)
         account_holder_rewards_batch.extend(account_holder_rewards)
-        if refund_window > 0:
-            account_holder_pending_rewards = _generate_account_holder_pending_rewards(
-                i, account_holder, reward_config, retailer_config, active_campaigns, refund_window
-            )
-            db_session.bulk_save_objects(account_holder_pending_rewards)
+        account_holder_pending_rewards = _generate_account_holder_pending_rewards(
+            i, account_holder, reward_config, retailer_config, active_campaigns, reward_rules, refund_window
+        )
+        account_holder_pending_rewards_batch.extend(account_holder_pending_rewards)
         progress_counter += 1
         bar.update(progress_counter)
 
@@ -106,6 +107,7 @@ def batch_create_account_holders_and_rewards(
     db_session.bulk_save_objects(account_holders_marketing_batch)
     db_session.bulk_save_objects(account_holder_rewards_batch)
     db_session.bulk_save_objects(account_holder_balance_batch)
+    db_session.bulk_save_objects(account_holder_pending_rewards_batch)
     db_session.commit()
 
     return progress_counter, matching_rewards_payloads_batch
@@ -169,8 +171,12 @@ def _generate_account_holder_pending_rewards(
     reward_config: "RewardConfig",
     retailer_config: RetailerConfig,
     active_campaigns: list[str],
+    reward_rules: dict,
     refund_window: int,
 ) -> list[AccountHolderPendingReward]:
+    if refund_window == 0:  # For generating pending_rewards for existing Retailer and RewardRule
+        refund_window = reward_rules[active_campaigns[0]][0].allocation_window
+
     def _generate_pending_rewards(
         pending_rewards_required: list[tuple[int, AccountHolderRewardStatuses]]
     ) -> list[AccountHolderPendingReward]:
