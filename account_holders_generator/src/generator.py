@@ -1,9 +1,11 @@
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Tuple
 from uuid import uuid4
 
 import click
 
 from progressbar import ProgressBar
+
+from account_holders_generator.src.polaris.db import RetailerConfig
 
 from .carina.crud import (
     create_unallocated_rewards,
@@ -36,7 +38,7 @@ def generate_account_holders_and_rewards(
     max_val: int,
     unallocated_rewards_to_create: int,
     refund_window: int,
-) -> None:
+) -> Tuple[RetailerConfig, list[str]]:
 
     retailer_config = get_retailer_by_slug(polaris_db_session, retailer_slug)
     click.echo("Selected retailer: %s" % retailer_config.name)
@@ -84,6 +86,8 @@ def generate_account_holders_and_rewards(
                 )
                 persist_allocated_rewards(carina_db_session, matching_reward_payloads_batch)
                 batch_start = batch_end
+
+    return retailer_config, active_campaigns
 
 
 def generate_retailer_base_config(

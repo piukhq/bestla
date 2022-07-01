@@ -4,6 +4,8 @@ import click
 
 from .src.carina.db import load_models as load_carina_models
 from .src.generator import generate_account_holders_and_rewards, generate_retailer_base_config
+from .src.hubble.crud import populate_activity_table
+from .src.hubble.db import load_models as load_hubble_models
 from .src.polaris.db import load_models as load_polaris_models
 from .src.vela.db import load_models as load_vela_models
 
@@ -83,6 +85,12 @@ from .src.vela.db import load_models as load_vela_models
     help="carina database name.",
 )
 @click.option(
+    "--hubble-db-name",
+    "hubble_db_name",
+    default="hubble",
+    help="hubble database name.",
+)
+@click.option(
     "--unallocated-rewards",
     "unallocated_rewards_to_create",
     default=10,
@@ -107,6 +115,12 @@ from .src.vela.db import load_models as load_vela_models
     default="PRE_LOADED",
     help="Sets a fetch type for rewards that are generated. There are only a select few types",
 )
+@click.option(
+    "--activity",
+    "activity",
+    default=True,
+    help="Generates data for activity table. Default is activity type of TX_HISTORY",
+)
 def main(
     account_holders_to_create: int,
     retailer: str,
@@ -120,10 +134,12 @@ def main(
     polaris_db_name: str,
     vela_db_name: str,
     carina_db_name: str,
+    hubble_db_name: str,
     unallocated_rewards_to_create: int,
     setup_retailer: bool,
     refund_window: int,
     fetch_type: str,
+    activity: bool,
 ) -> None:
 
     if max_val < 0:
@@ -144,6 +160,7 @@ def main(
     carina_db_session = load_carina_models(db_uri + carina_db_name)
     polaris_db_session = load_polaris_models(db_uri + polaris_db_name)
     vela_db_session = load_vela_models(db_uri + vela_db_name)
+    hubble_db_session = load_hubble_models(db_uri + hubble_db_name)
     try:
         if setup_retailer is True:
             generate_retailer_base_config(
@@ -157,7 +174,7 @@ def main(
                 fetch_type,
             )
 
-        generate_account_holders_and_rewards(
+        retailer_config, active_campaigns = generate_account_holders_and_rewards(
             carina_db_session,
             polaris_db_session,
             vela_db_session,
@@ -168,10 +185,15 @@ def main(
             unallocated_rewards_to_create,
             refund_window,
         )
+
+        if activity:
+            populate_activity_table(hubble_db_session, retailer_config.slug, active_campaigns, rows=50)
+
     finally:
         carina_db_session.close()
         polaris_db_session.close()
         vela_db_session.close()
+        hubble_db_session.close()
 
     click.echo("\naccount holders and rewards created.")
     sys.exit(0)
