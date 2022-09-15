@@ -1,3 +1,29 @@
+[tool.poetry]
+name = "bestla"
+version = "0.0.0"
+description = "Account Holders generator script"
+authors = ["Bink <bink@bink.bink>"]
+readme = "README.md"
+repository = "https://github.com/binkhq/bestla"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+SQLAlchemy = "^1.4.41"
+psycopg2-binary = "^2.9.3"
+click = "^8.0.3"
+progressbar2 = "^3.55.0"
+faker = "^9.8.0"
+hashids = "^1.3.1"
+pydantic = "^1.10.2"
+python-dotenv = "^0.21.0"
+
+[tool.poetry.group.dev.dependencies]
+black = "^22.8.0"
+isort = "^5.10.1"
+mypy = "^0.971"
+xenon = "^0.9.0"
+pylint = "^2.15.3"
+
 [tool.black]
 line-length = 120
 
@@ -10,3 +36,38 @@ use_parentheses = true
 ensure_newline_before_comments = true
 line_length = 120
 lines_between_types = 1
+
+[tool.mypy]
+disallow_untyped_defs = true
+show_error_codes = true
+warn_unused_ignores = true
+ignore_missing_imports = true
+plugins = [
+    "sqlalchemy.ext.mypy.plugin",
+]
+
+[tool.pylint.MASTER]
+load-plugins=[
+    "pylint.extensions.mccabe"
+]
+
+[tool.pylint.messages_control]
+max-line-length = 120
+disable = [
+    "too-many-arguments",
+    "no-value-for-parameter",
+    "too-many-locals",
+    "missing-module-docstring",
+    "missing-function-docstring",
+    "missing-class-docstring",
+    "too-few-public-methods",
+    "consider-using-f-string",
+    "duplicate-code", # pylint definition of "duplicate" is way too loose (ex: fastapi route definitions are flagged).
+    "too-many-ancestors", # flask admin views require a lot of inheritance
+    "protected-access", # flask admin validators need to access _obj
+    "broad-except", # we often need to catch all exceptions to flash.error them
+]
+good-names=["k", "v", "i", "q", "fn", "ex", "dt", "tz", "c", "p"]
+ignored-classes=[
+    "scoped_session"
+]

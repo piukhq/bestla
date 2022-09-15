@@ -59,7 +59,7 @@ def generate_account_holders_and_rewards(
         batch_start = ah_to_create
         progress_counter = 0
 
-        with ProgressBar(max_value=ah_to_create) as bar:
+        with ProgressBar(max_value=ah_to_create) as progress_bar:
             while batch_start > 0:
 
                 if batch_start <= BATCH_SIZE:
@@ -76,7 +76,7 @@ def generate_account_holders_and_rewards(
                     retailer_config=retailer_config,
                     active_campaigns=active_campaigns,
                     max_val=max_val,
-                    bar=bar,
+                    bar=progress_bar,
                     progress_counter=progress_counter,
                     account_holder_type_reward_code_salt=str(uuid4()),
                     reward_config=reward_config,

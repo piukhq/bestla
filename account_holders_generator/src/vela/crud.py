@@ -13,18 +13,21 @@ if TYPE_CHECKING:
 
 
 def get_active_campaigns(db_session: "Session", retailer: "RetailerConfig", campaign_default: str) -> list[str]:
-    campaigns = db_session.scalars(
-        select(Campaign.slug).where(
-            Campaign.status == "ACTIVE",
-            Campaign.retailer_id == RetailerRewards.id,
-            RetailerRewards.slug == retailer.slug,
+    campaigns = (
+        db_session.execute(
+            select(Campaign.slug).where(
+                Campaign.status == "ACTIVE",
+                Campaign.retailer_id == RetailerRewards.id,
+                RetailerRewards.slug == retailer.slug,
+            )
         )
+        .scalars()
+        .all()
     )
 
     if not campaigns:
         return [campaign_default]
-    else:
-        return [campaign for campaign in campaigns]
+    return campaigns
 
 
 def setup_retailer_reward_and_campaign(

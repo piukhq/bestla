@@ -1,5 +1,5 @@
 from random import randint
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING
 
 from account_holders_generator.src.enums import AccountHolderTypes
 
@@ -44,6 +44,6 @@ def generate_account_holder_campaign_balances(
     ]
 
 
-def generate_email(account_holder_type: AccountHolderTypes, account_holder_n: Union[int, str]) -> str:
+def generate_email(account_holder_type: AccountHolderTypes, account_holder_n: int | str) -> str:
     account_holder_n = str(account_holder_n).rjust(2, "0")
     return f"test_{account_holder_type.value}_user_{account_holder_n}@autogen.bpl"
