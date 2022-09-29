@@ -130,7 +130,7 @@ def main(
         click.echo("maximum balance value must be an integer greater than 1.")
         sys.exit(-1)
 
-    if not (1000000000 > account_holders_to_create > 0):
+    if not 1000000000 > account_holders_to_create > 0:
         click.echo("the number of account holders to create must be between 1 and 1,000,000,000.")
         sys.exit(-1)
 

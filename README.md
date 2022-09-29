@@ -8,8 +8,8 @@ Account Holder Generator command line tool
 - add your configurations based on the environmental variables required in `config.Settings`
 
 ## running as script:
-- `pipenv install --dev`
-- `pipenv run python run.py --help`
+- `poetry install`
+- `poetry run python run.py --help`
 
 ## running as package
 - `pip install -U .`

@@ -1,6 +1,8 @@
+import json
+
 from datetime import datetime, timedelta, timezone
 from random import randint
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any
 from uuid import UUID, uuid4
 
 from faker import Faker
@@ -158,6 +160,8 @@ def account_holder_pending_reward_payload(
     enqueued: bool,
 ) -> dict:
     now = datetime.now(tz=timezone.utc).replace(microsecond=0)
+    pending_reward_value = 200
+    count = 1
 
     return {
         "created_date": now,
@@ -169,6 +173,9 @@ def account_holder_pending_reward_payload(
         "reward_slug": reward_slug,
         "idempotency_token": str(uuid4()),
         "enqueued": enqueued,
+        "count": count,
+        "total_cost_to_user": pending_reward_value * count,
+        "pending_reward_uuid": str(uuid4()),
     }
 
 
@@ -211,9 +218,6 @@ def retailer_config_payload(retailer_slug: str) -> dict:
         ),
         "marketing_preference_config": "marketing_pref:\n  type: boolean\n  label: Sample Question?",
         "loyalty_name": retailer_name,
-        "email_header_image": f"{retailer_slug}-banner.png",
-        "welcome_email_from": f"{retailer_name} <no-reply@test.com>",
-        "welcome_email_subject": f"Welcome to {retailer_name}!",
     }
 
 
@@ -224,7 +228,7 @@ def campaign_payload(retailer_id: int, campaign_slug: str) -> dict:
         "name": campaign_slug.replace("-", " ").title(),
         "slug": campaign_slug,
         "start_date": datetime.now(tz=timezone.utc) - timedelta(minutes=5),
-        "loyalty_type": "STAMPS",
+        "loyalty_type": "ACCUMULATOR",
     }
 
 
@@ -249,17 +253,14 @@ def earn_rule_payload(campaign_id: int) -> dict:
     }
 
 
-def reward_config_payload(
-    retailer_id: int, reward_slug: str, fetch_type_id: int, required_fields_values: Optional[str] = None
-) -> dict:
+def reward_config_payload(retailer_id: int, reward_slug: str, fetch_type_id: int) -> dict:
     payload = {
         "reward_slug": reward_slug,
         "retailer_id": retailer_id,
         "status": "ACTIVE",
         "fetch_type_id": fetch_type_id,
+        "required_fields_values": json.dumps({"validity_days": 30}),
     }
-    if required_fields_values:
-        payload.update({"required_fields_values": required_fields_values})
     return payload
 
 
@@ -267,7 +268,7 @@ def carina_retailer_payload(retailer_slug: str) -> dict:
     return {"slug": retailer_slug}
 
 
-def retailer_fetch_type_payload(retailer_id: int, fetch_type_id: int, agent_config: Optional[str] = None) -> dict:
+def retailer_fetch_type_payload(retailer_id: int, fetch_type_id: int, agent_config: str | None = None) -> dict:
     payload: dict[str, Any] = {"retailer_id": retailer_id, "fetch_type_id": fetch_type_id}
     if agent_config:
         payload["agent_config"] = agent_config

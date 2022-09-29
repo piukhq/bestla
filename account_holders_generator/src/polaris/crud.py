@@ -1,7 +1,7 @@
 import sys
 
 from datetime import datetime, timedelta, timezone
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING
 from uuid import uuid4
 
 import click
@@ -112,7 +112,7 @@ def batch_create_account_holders_and_rewards(
 
 
 def _generate_account_holder_rewards(
-    account_holder_n: Union[int, str],
+    account_holder_n: int | str,
     account_holder: AccountHolder,
     batch_reward_salt: str,
     reward_config: "RewardConfig",
@@ -130,9 +130,9 @@ def _generate_account_holder_rewards(
             if reward_status == AccountHolderRewardStatuses.PENDING:
                 continue
             issue_date = datetime.now(tz=timezone.utc) - timedelta(days=14)
-            for j in range(how_many):
+            for reward_n in range(how_many):
                 reward_uuid = uuid4()
-                reward_code = hashids.encode(i, j, account_holder_n)
+                reward_code = hashids.encode(i, reward_n, account_holder_n)
                 reward_slug = reward_config.reward_slug
                 account_holder_rewards.append(
                     AccountHolderReward(
@@ -164,7 +164,7 @@ def _generate_account_holder_rewards(
 
 
 def _generate_account_holder_pending_rewards(
-    account_holder_n: Union[int, str],
+    account_holder_n: int | str,
     account_holder: AccountHolder,
     reward_config: "RewardConfig",
     retailer_config: RetailerConfig,
