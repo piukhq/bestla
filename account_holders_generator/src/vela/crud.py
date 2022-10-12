@@ -30,6 +30,23 @@ def get_active_campaigns(db_session: "Session", retailer: "RetailerConfig", camp
     return campaigns
 
 
+def get_campaign(db_session: "Session", campaign_slug: str) -> Campaign:
+    return db_session.execute(
+        select(Campaign).where(
+            Campaign.slug == campaign_slug,
+        )
+    ).scalar_one()
+
+
+def get_reward_rule(db_session: "Session", campaign_slug: str) -> RewardRule:
+    campaign = get_campaign(db_session, campaign_slug)
+    return db_session.execute(
+        select(RewardRule).where(
+            RewardRule.campaign_id == campaign.id,
+        )
+    ).scalar_one()
+
+
 def setup_retailer_reward_and_campaign(
     db_session: "Session", retailer_slug: str, campaign_slug: str, reward_slug: str, refund_window: int
 ) -> None:

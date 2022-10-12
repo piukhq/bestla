@@ -1,5 +1,6 @@
 import json
 
+from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from random import randint
 from typing import TYPE_CHECKING, Any
@@ -71,6 +72,28 @@ ACCOUNT_HOLDER_REWARD_SWITCHER: dict[int, list] = {
         (3, AccountHolderRewardStatuses.PENDING),
     ],
 }
+
+
+@dataclass
+class TxHistoryRowsData:
+    tx_amount: float
+    location: str
+
+
+def generate_tx_rows(reward_goal: int, retailer_slug: str) -> list[TxHistoryRowsData]:
+    tx_history_list = [
+        TxHistoryRowsData((reward_goal / 4), f"{retailer_slug} London"),
+        TxHistoryRowsData(-(reward_goal / 2), f"{retailer_slug} Edinburgh"),
+        TxHistoryRowsData(reward_goal / 2, f"{retailer_slug} Manchester"),
+        TxHistoryRowsData(reward_goal, f"{retailer_slug} London"),
+        TxHistoryRowsData(-reward_goal, f"{retailer_slug} Cardiff"),
+        TxHistoryRowsData(reward_goal * 1.5, f"{retailer_slug} London"),
+        TxHistoryRowsData(-(reward_goal * 1.5), f"{retailer_slug} Edinburgh"),
+        TxHistoryRowsData(-(reward_goal * 2), f"{retailer_slug} Manchester"),
+        TxHistoryRowsData(reward_goal * 2, f"{retailer_slug} London"),
+        TxHistoryRowsData(-(reward_goal / 4), f"{retailer_slug} Manchester"),
+    ]
+    return tx_history_list
 
 
 def account_holder_payload(
@@ -176,6 +199,24 @@ def account_holder_pending_reward_payload(
         "count": count,
         "total_cost_to_user": pending_reward_value * count,
         "pending_reward_uuid": str(uuid4()),
+    }
+
+
+def account_holder_transaction_history_payload(
+    account_holder_id: int,
+    tx_amount: str,
+    location: str,
+) -> dict:
+    now = datetime.now(tz=timezone.utc).replace(microsecond=0)
+
+    return {
+        "transaction_id": f"{account_holder_id}{randint(1, 1000000)}",
+        "datetime": now,
+        "amount": tx_amount,
+        "amount_currency": "GBP",
+        "location_name": location,
+        "earned": [{"type": "ACCUMULATOR", "value": "£" + tx_amount}],
+        "account_holder_id": account_holder_id,
     }
 
 

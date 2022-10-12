@@ -55,6 +55,12 @@ class AccountHolderPendingReward(Base):
     account_holder_id = Column(BIGINT, ForeignKey("account_holder.id", ondelete="CASCADE"))
 
 
+class AccountHolderTransactionHistory(Base):
+    __tablename__ = "account_holder_transaction_history"
+
+    account_holder_id = Column(BIGINT, ForeignKey("account_holder.id", ondelete="CASCADE"))
+
+
 class AccountHolderCampaignBalance(Base):
     __tablename__ = "account_holder_campaign_balance"
 

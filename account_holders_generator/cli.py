@@ -107,6 +107,12 @@ from .src.vela.db import load_models as load_vela_models
     default="PRE_LOADED",
     help="Sets a fetch type for rewards that are generated. There are only a select few types",
 )
+@click.option(
+    "--tx-history",
+    "tx_history",
+    default=True,
+    help="Sets up transaction history for account holders",
+)
 def main(
     account_holders_to_create: int,
     retailer: str,
@@ -124,6 +130,7 @@ def main(
     setup_retailer: bool,
     refund_window: int,
     fetch_type: str,
+    tx_history: bool,
 ) -> None:
 
     if max_val < 0:
@@ -167,6 +174,7 @@ def main(
             max_val,
             unallocated_rewards_to_create,
             refund_window,
+            tx_history,
         )
     finally:
         carina_db_session.close()
