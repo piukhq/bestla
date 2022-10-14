@@ -206,8 +206,16 @@ def account_holder_transaction_history_payload(
     account_holder_id: int,
     tx_amount: str,
     location: str,
+    loyalty_type: str,
 ) -> dict:
     now = datetime.now(tz=timezone.utc).replace(microsecond=0)
+    if loyalty_type == "STAMPS":
+        if float(tx_amount) <= 0:
+            value = "0"
+        else:
+            value = "1"
+    else:
+        value = "£" + tx_amount
 
     return {
         "transaction_id": f"{account_holder_id}{randint(1, 1000000)}",
@@ -215,7 +223,7 @@ def account_holder_transaction_history_payload(
         "amount": tx_amount,
         "amount_currency": "GBP",
         "location_name": location,
-        "earned": [{"type": "ACCUMULATOR", "value": "£" + tx_amount}],
+        "earned": [{"type": loyalty_type, "value": value}],
         "account_holder_id": account_holder_id,
     }
 
@@ -262,18 +270,18 @@ def retailer_config_payload(retailer_slug: str) -> dict:
     }
 
 
-def campaign_payload(retailer_id: int, campaign_slug: str) -> dict:
+def campaign_payload(retailer_id: int, campaign_slug: str, loyalty_type: str) -> dict:
     return {
         "retailer_id": retailer_id,
         "status": "ACTIVE",
         "name": campaign_slug.replace("-", " ").title(),
         "slug": campaign_slug,
         "start_date": datetime.now(tz=timezone.utc) - timedelta(minutes=5),
-        "loyalty_type": "ACCUMULATOR",
+        "loyalty_type": loyalty_type,
     }
 
 
-def reward_rule_payload(campaign_id: int, reward_slug: str, refund_window: int) -> dict:
+def reward_rule_payload(campaign_id: int, reward_slug: str, refund_window: int | None) -> dict:
     payload = {
         "campaign_id": campaign_id,
         "reward_slug": reward_slug,
@@ -285,11 +293,11 @@ def reward_rule_payload(campaign_id: int, reward_slug: str, refund_window: int) 
     return payload
 
 
-def earn_rule_payload(campaign_id: int) -> dict:
+def earn_rule_payload(campaign_id: int, loyalty_type: str) -> dict:
     return {
         "campaign_id": campaign_id,
         "threshold": 500,
-        "increment": 300,
+        "increment": 300 if loyalty_type == "STAMPS" else None,
         "increment_multiplier": 1.25,
     }
 
