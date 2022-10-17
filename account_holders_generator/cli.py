@@ -36,6 +36,13 @@ from .src.vela.db import load_models as load_vela_models
     help="backup campaign name used for generating balances if no active campaign is found.",
 )
 @click.option(
+    "--loyalty-type",
+    "loyalty_type",
+    type=click.Choice(["STAMPS", "ACCUMULATOR", "BOTH"]),
+    default="ACCUMULATOR",
+    help="Select campaign loyalty type.",
+)
+@click.option(
     "--reward-slug",
     default="10percentoff",
     help="reward_slug to use in case of a --bootstrap-new-retailer.",
@@ -107,6 +114,12 @@ from .src.vela.db import load_models as load_vela_models
     default="PRE_LOADED",
     help="Sets a fetch type for rewards that are generated. There are only a select few types",
 )
+@click.option(
+    "--tx-history",
+    "tx_history",
+    default=True,
+    help="Sets up transaction history for account holders",
+)
 def main(
     account_holders_to_create: int,
     retailer: str,
@@ -124,6 +137,8 @@ def main(
     setup_retailer: bool,
     refund_window: int,
     fetch_type: str,
+    tx_history: bool,
+    loyalty_type: str,
 ) -> None:
 
     if max_val < 0:
@@ -155,6 +170,7 @@ def main(
                 reward_slug,
                 refund_window,
                 fetch_type,
+                loyalty_type,
             )
 
         generate_account_holders_and_rewards(
@@ -167,6 +183,8 @@ def main(
             max_val,
             unallocated_rewards_to_create,
             refund_window,
+            tx_history,
+            loyalty_type,
         )
     finally:
         carina_db_session.close()

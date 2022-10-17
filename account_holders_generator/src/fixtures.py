@@ -1,5 +1,6 @@
 import json
 
+from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from random import randint
 from typing import TYPE_CHECKING, Any
@@ -71,6 +72,28 @@ ACCOUNT_HOLDER_REWARD_SWITCHER: dict[int, list] = {
         (3, AccountHolderRewardStatuses.PENDING),
     ],
 }
+
+
+@dataclass
+class TxHistoryRowsData:
+    tx_amount: float
+    location: str
+
+
+def generate_tx_rows(reward_goal: int, retailer_slug: str) -> list[TxHistoryRowsData]:
+    tx_history_list = [
+        TxHistoryRowsData((reward_goal / 4), f"{retailer_slug} London"),
+        TxHistoryRowsData(-(reward_goal / 2), f"{retailer_slug} Edinburgh"),
+        TxHistoryRowsData(reward_goal / 2, f"{retailer_slug} Manchester"),
+        TxHistoryRowsData(reward_goal, f"{retailer_slug} London"),
+        TxHistoryRowsData(-reward_goal, f"{retailer_slug} Cardiff"),
+        TxHistoryRowsData(reward_goal * 1.5, f"{retailer_slug} London"),
+        TxHistoryRowsData(-(reward_goal * 1.5), f"{retailer_slug} Edinburgh"),
+        TxHistoryRowsData(-(reward_goal * 2), f"{retailer_slug} Manchester"),
+        TxHistoryRowsData(reward_goal * 2, f"{retailer_slug} London"),
+        TxHistoryRowsData(-(reward_goal / 4), f"{retailer_slug} Manchester"),
+    ]
+    return tx_history_list
 
 
 def account_holder_payload(
@@ -179,6 +202,32 @@ def account_holder_pending_reward_payload(
     }
 
 
+def account_holder_transaction_history_payload(
+    account_holder_id: int,
+    tx_amount: str,
+    location: str,
+    loyalty_type: str,
+) -> dict:
+    now = datetime.now(tz=timezone.utc).replace(microsecond=0)
+    if loyalty_type == "STAMPS":
+        if float(tx_amount) <= 0:
+            value = "0"
+        else:
+            value = "1"
+    else:
+        value = "£" + tx_amount
+
+    return {
+        "transaction_id": f"{account_holder_id}{randint(1, 1000000)}",
+        "datetime": now,
+        "amount": tx_amount,
+        "amount_currency": "GBP",
+        "location_name": location,
+        "earned": [{"type": loyalty_type, "value": value}],
+        "account_holder_id": account_holder_id,
+    }
+
+
 def reward_payload(reward_uuid: UUID, reward_code: str, reward_config_id: int, retailer_id: int) -> dict:
     return {
         "id": reward_uuid,
@@ -221,18 +270,18 @@ def retailer_config_payload(retailer_slug: str) -> dict:
     }
 
 
-def campaign_payload(retailer_id: int, campaign_slug: str) -> dict:
+def campaign_payload(retailer_id: int, campaign_slug: str, loyalty_type: str) -> dict:
     return {
         "retailer_id": retailer_id,
         "status": "ACTIVE",
         "name": campaign_slug.replace("-", " ").title(),
         "slug": campaign_slug,
         "start_date": datetime.now(tz=timezone.utc) - timedelta(minutes=5),
-        "loyalty_type": "ACCUMULATOR",
+        "loyalty_type": loyalty_type,
     }
 
 
-def reward_rule_payload(campaign_id: int, reward_slug: str, refund_window: int) -> dict:
+def reward_rule_payload(campaign_id: int, reward_slug: str, refund_window: int | None) -> dict:
     payload = {
         "campaign_id": campaign_id,
         "reward_slug": reward_slug,
@@ -244,11 +293,11 @@ def reward_rule_payload(campaign_id: int, reward_slug: str, refund_window: int) 
     return payload
 
 
-def earn_rule_payload(campaign_id: int) -> dict:
+def earn_rule_payload(campaign_id: int, loyalty_type: str) -> dict:
     return {
         "campaign_id": campaign_id,
         "threshold": 500,
-        "increment": 300,
+        "increment": 300 if loyalty_type == "STAMPS" else None,
         "increment_multiplier": 1.25,
     }
 

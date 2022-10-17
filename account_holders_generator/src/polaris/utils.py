@@ -16,6 +16,7 @@ def generate_account_number(prefix: str, account_holder_type: AccountHolderTypes
         + account_holder_type.account_holder_type_index
         + "0" * (8 - len(account_holder_n_str))
         + account_holder_n_str
+        + str(randint(1, 999999))
     )
 
 

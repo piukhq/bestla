@@ -1,6 +1,7 @@
 import sys
 
 from datetime import datetime, timedelta, timezone
+from random import randint
 from typing import TYPE_CHECKING
 from uuid import uuid4
 
@@ -20,6 +21,8 @@ from ..fixtures import (
     account_holder_pending_reward_payload,
     account_holder_profile_payload,
     account_holder_reward_payload,
+    account_holder_transaction_history_payload,
+    generate_tx_rows,
     retailer_config_payload,
     reward_payload,
 )
@@ -29,6 +32,7 @@ from .db import (
     AccountHolderPendingReward,
     AccountHolderProfile,
     AccountHolderReward,
+    AccountHolderTransactionHistory,
     RetailerConfig,
 )
 from .utils import generate_account_holder_campaign_balances
@@ -63,9 +67,13 @@ def batch_create_account_holders_and_rewards(
     progress_counter: int,
     account_holder_type_reward_code_salt: str,
     reward_config: "RewardConfig",
-    refund_window: int,
+    refund_window: int | None,
+    tx_history: bool,
+    reward_goal: int,
+    loyalty_type: str,
 ) -> tuple[int, list[dict]]:
-
+    if refund_window is None:
+        refund_window = 0
     account_holders_batch = []
     account_holders_profile_batch = []
     account_holders_marketing_batch = []
@@ -73,6 +81,7 @@ def batch_create_account_holders_and_rewards(
 
     account_holder_rewards_batch = []
     matching_rewards_payloads_batch = []
+    account_holder_transaction_history_batch = []
     batch_range = range(batch_start, batch_end, -1)
 
     account_holders_batch = [
@@ -82,6 +91,10 @@ def batch_create_account_holders_and_rewards(
     db_session.flush()
 
     for account_holder, i in zip(account_holders_batch, batch_range):
+        if tx_history:
+            account_holder_transaction_history_batch.extend(
+                _generate_account_holder_transaction_history(account_holder, retailer_config, reward_goal, loyalty_type)
+            )
         account_holder_balance_batch.extend(
             generate_account_holder_campaign_balances(account_holder, active_campaigns, account_holder_type, max_val)
         )
@@ -102,6 +115,7 @@ def batch_create_account_holders_and_rewards(
         progress_counter += 1
         bar.update(progress_counter)
 
+    db_session.bulk_save_objects(account_holder_transaction_history_batch)
     db_session.bulk_save_objects(account_holders_profile_batch)
     db_session.bulk_save_objects(account_holders_marketing_batch)
     db_session.bulk_save_objects(account_holder_rewards_batch)
@@ -197,6 +211,30 @@ def _generate_account_holder_pending_rewards(
 
     account_holder_reward_type = int(account_holder_n) % 11
     return _generate_pending_rewards(ACCOUNT_HOLDER_REWARD_SWITCHER[account_holder_reward_type])
+
+
+def _generate_account_holder_transaction_history(
+    account_holder: AccountHolder,
+    retailer_config: RetailerConfig,
+    reward_goal: int,
+    loyalty_type: str,
+) -> list[AccountHolderTransactionHistory]:
+    account_holder_transaction_history: list[AccountHolderTransactionHistory] = []
+    how_many = randint(1, 10)
+    tx_history_rows = generate_tx_rows(reward_goal, retailer_slug=retailer_config.slug)
+    for tx_history in tx_history_rows[:how_many]:
+        account_holder_transaction_history.append(
+            AccountHolderTransactionHistory(
+                **account_holder_transaction_history_payload(
+                    account_holder_id=account_holder.id,
+                    tx_amount=str(tx_history.tx_amount),
+                    location=tx_history.location,
+                    loyalty_type=loyalty_type,
+                )
+            )
+        )
+
+    return account_holder_transaction_history
 
 
 def clear_existing_account_holders(db_session: "Session", retailer_id: int) -> None:
