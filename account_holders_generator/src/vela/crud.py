@@ -65,7 +65,7 @@ def setup_retailer_reward_and_campaign(
     )
     if loyalty_type == "STAMPS":
         refund_window = None
-    retailer = RetailerRewards(slug=retailer_slug)
+    retailer = RetailerRewards(slug=retailer_slug, status="TEST")
     db_session.add(retailer)
     db_session.flush()
     campaign = Campaign(**campaign_payload(retailer.id, campaign_slug, loyalty_type))
