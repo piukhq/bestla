@@ -103,7 +103,13 @@ def batch_create_account_holders_and_rewards(
             AccountHolderMarketingPreference(**account_holder_marketing_preference_payload(account_holder))
         )
         account_holder_rewards, matching_rewards_payloads = _generate_account_holder_rewards(
-            i, account_holder, account_holder_type_reward_code_salt, reward_config, retailer, retailer_config
+            i,
+            account_holder,
+            account_holder_type_reward_code_salt,
+            reward_config,
+            retailer,
+            retailer_config,
+            active_campaigns[0],
         )
         matching_rewards_payloads_batch.extend(matching_rewards_payloads)
         account_holder_rewards_batch.extend(account_holder_rewards)
@@ -132,6 +138,7 @@ def _generate_account_holder_rewards(
     reward_config: "RewardConfig",
     retailer: Retailer,
     retailer_config: RetailerConfig,
+    campaign_slug: str,
 ) -> tuple[list[AccountHolderReward], list[dict]]:
     hashids = Hashids(batch_reward_salt, min_length=15)
 
@@ -158,6 +165,7 @@ def _generate_account_holder_rewards(
                             reward_slug=reward_slug,
                             reward_status=reward_status,
                             issue_date=issue_date,
+                            campaign_slug=campaign_slug,
                         )
                     )
                 )

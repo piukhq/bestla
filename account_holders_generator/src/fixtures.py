@@ -148,6 +148,7 @@ def account_holder_reward_payload(
     reward_slug: str,
     reward_status: AccountHolderRewardStatuses,
     issue_date: datetime,
+    campaign_slug: str,
 ) -> dict:
     now = datetime.now(tz=timezone.utc).replace(microsecond=0)
 
@@ -171,6 +172,7 @@ def account_holder_reward_payload(
         if reward_status == AccountHolderRewardStatuses.CANCELLED
         else None,
         "idempotency_token": str(uuid4()),
+        "campaign_slug": campaign_slug,
     }
 
 
@@ -267,6 +269,7 @@ def retailer_config_payload(retailer_slug: str) -> dict:
         ),
         "marketing_preference_config": "marketing_pref:\n  type: boolean\n  label: Sample Question?",
         "loyalty_name": retailer_name,
+        "status": "TEST",
     }
 
 
@@ -314,7 +317,7 @@ def reward_config_payload(retailer_id: int, reward_slug: str, fetch_type_id: int
 
 
 def carina_retailer_payload(retailer_slug: str) -> dict:
-    return {"slug": retailer_slug}
+    return {"slug": retailer_slug, "status": "TEST"}
 
 
 def retailer_fetch_type_payload(retailer_id: int, fetch_type_id: int, agent_config: str | None = None) -> dict:
